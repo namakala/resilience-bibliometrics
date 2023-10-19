@@ -1,5 +1,5 @@
 # Load packages
-pkgs <- c("magrittr", "targets", "tarchetypes")
+pkgs <- c("magrittr", "targets", "tarchetypes", "bibliometrix")
 sapply(pkgs, library, character.only = TRUE)
 
 # List all raw data
@@ -21,7 +21,7 @@ list(
   tar_target(tbl_pm, bibliometrix::convert2df(dat_pm, dbsource = "pubmed", format = "api")),
 
   # Perform bibliometrics analysis
-  tar_target(bib_pm, bibliometrix::bilbioAnalysis(tbl_pm)),
+  tar_target(bib_pm, bibliometrix::biblioAnalysis(tbl_pm)),
 
   # Generate documentation
   tar_quarto(readme, "README.qmd", priority = 0)
