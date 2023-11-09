@@ -1,18 +1,96 @@
 # Functions to parse the data
 
-readBib <- function(filename, ...) {
+readBib <- function(filepath, ...) {
   #' Read Bibliography
   #'
   #' Read bilbiography file, supporting plain text, csv, or bibtex as
   #' documented in https://www.bibliometrix.org/vignettes/Data-Importing-and-Converting.html
   #'
-  #' @param filename A relative path to access the file, complete with the file
+  #' @param filepath A relative path to access the file, complete with the file
   #' name. It is recommended to have the file named after the database source,
-  #' e.g. pubmed or scopus (case insensitive).
+  #' e.g. pubmed.txt or scopus.csv (case insensitive).
   #' @inheritDotParams bibliometrix::convert2df
   #' @return A data frame of `bibliometrixDB` class
   require("bibliometrix")
-  bib <- convert2df(filename, ...)
+
+  # Get filename and extension
+  fname <- gsub(x = filepath, ".*/|\\..+", "")
+  ext   <- gsub(x = filepath, ".*\\.", "")
+
+  # Stop if fname does not indicate the database
+  valid_db <- c("cochrane", "pubmed", "scopus", "wos", "isi", "dimensions")
+
+  msg <- sprintf(
+    "Name your file following valid database names: %s",
+    paste(valid_db, collapse = ", ")
+  )
+
+  if (any(!fname %in% valid_db)) stop(msg)
+
+  # Set data format
+  fmt <- dplyr::case_when(
+    ext == "txt" ~ "plaintext",
+    ext == "csv" ~ "csv",
+    ext == "bib" ~ "bibtex"
+  )
+
+  if (length(filepath) > 1) {
+    bib <- lapply(filepath, readBib, ...)
+  } else {
+    bib <- convert2df(filepath, dbsource = fname, format = fmt)
+  }
 
   return(bib)
+}
+
+mergeBib <- function(bibs, ...) {
+  #' Merge Bibliography Dat Frames
+  #'
+  #' Merge a list of bibiography data frames
+  #'
+  #' @param bibs A list of bibliography data frames
+  #' @inheritDotParams base::merge
+  #' @return A merged and deduplicated bibliography data frame
+
+  # Get fields from the Web of Science
+  wos_field <- names(bibs$wos)
+
+  # Merge bibliography data frames
+  bib <- Reduce(\(x, y) merge(x, y, all = TRUE, ...), bibs) %>%
+    subset(select = wos_field) %>% # Select only WoS fields
+    inset( # Count complete information within an entry
+      "n_field",
+      value = {
+        apply(., 1, \(x) {!is.na(x)} %>% sum())
+      }
+    )
+
+  # Reorder based on completeness
+  bib %<>% {.[order(.$n_field, decreasing = TRUE), ]}
+
+  # Deduplicate the merged data frame
+  bib_dedup <- dedup(bib)
+
+  return(bib_dedup)
+}
+
+dedup <- function(bib, ...) {
+  #' Deduplicate Data Frame
+  #'
+  #' Deduplicated bibliometric data frame obtained from
+  #' `bibliometrix::convert2df`
+  #'
+  #' @param bib A bibliometric data frame
+  #' @inheritDotParams base::duplicated
+  #' @return A deduplicated data frame
+
+  # Find duplicates based on DOI and title
+  dup_doi   <- duplicated(bib$DI)
+  dup_title <- duplicated(bib$TI)
+  id        <- dup_doi | dup_title
+
+  # Remove duplicates, prioritize preserving the complete entry
+  sub_bib   <- subset(bib, !id)
+
+  return(sub_bib)
 }

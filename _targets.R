@@ -2,8 +2,10 @@
 pkgs <- c("magrittr", "targets", "tarchetypes", "bibliometrix")
 sapply(pkgs, library, character.only = TRUE)
 
-# List all raw data
-raw <- list.files("data/raw", recursive = TRUE, full.names = TRUE) %>%
+# List all references
+ref <- list.files(
+    "data/raw", recursive = TRUE, full.names = TRUE, pattern = "*.(csv|txt|bib)"
+  ) %>%
   set_names(gsub(x = ., ".*/|\\..+", ""))
 
 # Source all functions
@@ -13,15 +15,12 @@ fun <- list.files("src/R", recursive = TRUE, full.names = TRUE, pattern = "*.R")
 # Analysis pipeline
 list(
 
-  # Query the database
-  tar_target(query_pm, genQuery(type = "pubmed")),
-  tar_target(dat_pm, DBquery(query_pm, type = "pubmed")),
+  # Read exported dataset
+  tar_target(bibs, readBib(ref)),
+  tar_target(bib,  mergeBib(bibs)),
 
-  # Read query results as a dataframe
-  tar_target(tbl_pm, bibliometrix::convert2df(dat_pm, dbsource = "pubmed", format = "api")),
-
-  # Perform bibliometrics analysis
-  tar_target(bib_pm, bibliometrix::biblioAnalysis(tbl_pm)),
+  # Perform bibliometrics analysis and create network of authors
+  tar_target(analyzed_bib, bibliometrix::biblioAnalysis(bib)),
 
   # Generate documentation
   tar_quarto(readme, "README.qmd", priority = 0)
