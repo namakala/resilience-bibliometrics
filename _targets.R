@@ -19,8 +19,17 @@ list(
   tar_target(bibs, readBib(ref)),
   tar_target(bib,  mergeBib(bibs)),
 
-  # Perform bibliometrics analysis and create network of authors
+  # Perform bibliometrics analysis
   tar_target(analyzed_bib, bibliometrix::biblioAnalysis(bib)),
+
+  # Reference data from WoS for network analysis
+  tar_target(sub_bib, bib %>% subset(.$DB == "ISI")),
+
+  # Extract the network of articles
+  tar_target(net_auth, mkNetwork(sub_bib,    analysis = "collaboration",  network = "authors")),
+  tar_target(net_keyword, mkNetwork(sub_bib, analysis = "co-occurrences", network = "keywords")),
+  tar_target(net_ref, mkNetwork(sub_bib,     analysis = "co-citation",    network = "references")),
+  tar_target(net_src, mkNetwork(sub_bib,     analysis = "coupling",       network = "sources")),
 
   # Generate documentation
   tar_quarto(readme, "README.qmd", priority = 0)
