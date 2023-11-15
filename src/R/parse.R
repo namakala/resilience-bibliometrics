@@ -57,7 +57,7 @@ mergeBib <- function(bibs, ...) {
 
   # Merge bibliography data frames
   bib <- Reduce(\(x, y) merge(x, y, all = TRUE, ...), bibs) %>%
-    subset(select = wos_field) %>% # Select only WoS fields
+    subset(!is.na(.$DI), select = wos_field) %>% # Select only WoS fields
     inset( # Count complete information within an entry
       "n_field",
       value = {
