@@ -44,7 +44,7 @@ readBib <- function(filepath, ...) {
 }
 
 mergeBib <- function(bibs, ...) {
-  #' Merge Bibliography Dat Frames
+  #' Merge Bibliography Data Frames
   #'
   #' Merge a list of bibiography data frames
   #'

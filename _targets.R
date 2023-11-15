@@ -14,9 +14,9 @@ fun <- list.files("src/R", recursive = TRUE, full.names = TRUE, pattern = "*.R")
 
 # Set option for targets
 tar_option_set(
-  packages  = pkgs,
-  error     = "continue",
-  memory    = "transient",
+  packages   = pkgs,
+  error      = "continue",
+  memory     = "transient",
   controller = crew_controller_local(worker = 4),
   storage    = "worker",
   retrieval  = "worker",
@@ -40,11 +40,10 @@ list(
   tar_map(
     unlist = FALSE,
     values = tibble::tibble(
-      "fun"      = rlang::syms("mkNetwork"),
       "analysis" = c("collaboration", "co-occurrences", "co-citation", "coupling"),
       "network"  = c("authors", "keywords", "references", "sources")
     ),
-    tar_target(network_bib, fun(sub_bib, analysis = analysis, network = network))
+    tar_target(network_bib, mkNetwork(sub_bib, analysis = analysis, network = network))
   ),
 
   # Generate documentation
