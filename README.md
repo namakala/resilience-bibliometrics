@@ -45,14 +45,13 @@ This is the analysis pipeline for conducting analysis in an umbrella
 review. The complete flow can be viewed in the following `mermaid`
 diagram:
 
-renv 1.0.0 was loaded from project library, but this project is
-configured to use renv 1.0.3. - Use `renv::record("renv@1.0.0")` to
-record renv 1.0.0 in the lockfile. - Use
-`renv::restore(packages = "renv")` to install renv 1.0.3 into the
-project library. Please note that our software is open source and
-available for use, distributed under the MIT license. When it is used in
-a publication, we ask that authors properly cite the following
-reference:
+- The project is out-of-sync – use `renv::status()` for details. During
+  startup - Warning messages: 1: Setting LC_COLLATE failed, using “C” 2:
+  Setting LC_TIME failed, using “C” 3: Setting LC_MESSAGES failed, using
+  “C” 4: Setting LC_MONETARY failed, using “C” Please note that our
+  software is open source and available for use, distributed under the
+  MIT license. When it is used in a publication, we ask that authors
+  properly cite the following reference:
 
 Aria, M. & Cuccurullo, C. (2017) bibliometrix: An R-tool for
 comprehensive science mapping analysis, Journal of Informetrics, 11(4),
@@ -77,36 +76,40 @@ graph LR
   style Graph fill:#FFFFFF00,stroke:#000000;
   subgraph Legend
     direction LR
-    x5b3426b4c7fa7dbc([""Started""]):::started --- x0a52b03877696646([""Outdated""]):::outdated
-    x0a52b03877696646([""Outdated""]):::outdated --- x7420bd9270f8d27d([""Up to date""]):::uptodate
-    x7420bd9270f8d27d([""Up to date""]):::uptodate --- xbf4603d6c2c2ad6b([""Stem""]):::none
+    x7420bd9270f8d27d([""Up to date""]):::uptodate --- x5b3426b4c7fa7dbc([""Started""]):::started
+    x5b3426b4c7fa7dbc([""Started""]):::started --- xbf4603d6c2c2ad6b([""Stem""]):::none
     xbf4603d6c2c2ad6b([""Stem""]):::none --- xf0bce276fe2b9d3e>""Function""]:::none
     xf0bce276fe2b9d3e>""Function""]:::none --- x5bffbffeae195fc9{{""Object""}}:::none
   end
   subgraph Graph
     direction LR
-    xb2d44098e9dbb607(["bibs"]):::outdated --> x2f7ce3a74217c3eb(["bib"]):::outdated
-    x2f7ce3a74217c3eb(["bib"]):::outdated --> x5d0137cf25dee142(["analyzed_bib"]):::outdated
-    xffb09e21cb2bb0ec>"readBib"]:::uptodate --> xb2d44098e9dbb607(["bibs"]):::outdated
-    xc5a9e5584c3f223f{{"ref"}}:::uptodate --> xb2d44098e9dbb607(["bibs"]):::outdated
+    x2e3537559af5fbf8>"dedup"]:::uptodate --> x9e9a67411fa60786>"mergeBib"]:::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> xd3f20a2f996e26ce(["network_bib_mkNetwork_co.occurrences_keywords"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> xd3f20a2f996e26ce(["network_bib_mkNetwork_co.occurrences_keywords"]):::uptodate
+    xb2d44098e9dbb607(["bibs"]):::uptodate --> x2f7ce3a74217c3eb(["bib"]):::uptodate
+    x9e9a67411fa60786>"mergeBib"]:::uptodate --> x2f7ce3a74217c3eb(["bib"]):::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> xbdb58136cfeec83a(["network_bib_mkNetwork_collaboration_authors"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> xbdb58136cfeec83a(["network_bib_mkNetwork_collaboration_authors"]):::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> x5d0137cf25dee142(["analyzed_bib"]):::uptodate
+    xffb09e21cb2bb0ec>"readBib"]:::uptodate --> xb2d44098e9dbb607(["bibs"]):::uptodate
+    xc5a9e5584c3f223f{{"ref"}}:::uptodate --> xb2d44098e9dbb607(["bibs"]):::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> x1f29d4abcfe1d32a(["network_bib_mkNetwork_coupling_sources"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> x1f29d4abcfe1d32a(["network_bib_mkNetwork_coupling_sources"]):::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> x1592aa0a5fd55f23(["sub_bib"]):::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> x3d74a378a58dff6e(["network_bib_mkNetwork_co.citation_references"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> x3d74a378a58dff6e(["network_bib_mkNetwork_co.citation_references"]):::uptodate
     x6e52cb0f1668cc22(["readme"]):::started --> x6e52cb0f1668cc22(["readme"]):::started
-    xccdeb963b10f414c>"genQuery"]:::uptodate --> xccdeb963b10f414c>"genQuery"]:::uptodate
     x2d15849e3198e8d1{{"pkgs"}}:::uptodate --> x2d15849e3198e8d1{{"pkgs"}}:::uptodate
-    xcc1ff618dac8ab74>"DBquery"]:::uptodate --> xcc1ff618dac8ab74>"DBquery"]:::uptodate
     x22b0201614333ef4{{"fun"}}:::uptodate --> x22b0201614333ef4{{"fun"}}:::uptodate
   end
-  classDef started stroke:#000000,color:#000000,fill:#DC863B;
-  classDef outdated stroke:#000000,color:#000000,fill:#78B7C5;
   classDef uptodate stroke:#000000,color:#ffffff,fill:#354823;
+  classDef started stroke:#000000,color:#000000,fill:#DC863B;
   classDef none stroke:#000000,color:#000000,fill:#94a4ac;
   linkStyle 0 stroke-width:0px;
   linkStyle 1 stroke-width:0px;
   linkStyle 2 stroke-width:0px;
   linkStyle 3 stroke-width:0px;
-  linkStyle 4 stroke-width:0px;
-  linkStyle 9 stroke-width:0px;
-  linkStyle 10 stroke-width:0px;
-  linkStyle 11 stroke-width:0px;
-  linkStyle 12 stroke-width:0px;
-  linkStyle 13 stroke-width:0px;
+  linkStyle 19 stroke-width:0px;
+  linkStyle 20 stroke-width:0px;
+  linkStyle 21 stroke-width:0px;
 ```

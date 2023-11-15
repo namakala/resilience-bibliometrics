@@ -1,5 +1,5 @@
 # Load packages
-pkgs <- c("magrittr", "targets", "tarchetypes", "bibliometrix")
+pkgs <- c("magrittr", "targets", "tarchetypes", "bibliometrix", "crew")
 sapply(pkgs, library, character.only = TRUE)
 
 # List all references
@@ -11,6 +11,17 @@ ref <- list.files(
 # Source all functions
 fun <- list.files("src/R", recursive = TRUE, full.names = TRUE, pattern = "*.R") %>%
   sapply(source)
+
+# Set option for targets
+tar_option_set(
+  packages  = pkgs,
+  error     = "continue",
+  memory    = "transient",
+  controller = crew_controller_local(worker = 4),
+  storage    = "worker",
+  retrieval  = "worker",
+  garbage_collection = TRUE
+)
 
 # Analysis pipeline
 list(
@@ -26,10 +37,15 @@ list(
   tar_target(sub_bib, bib %>% subset(.$DB == "ISI")),
 
   # Extract the network of articles
-  tar_target(net_auth, mkNetwork(sub_bib,    analysis = "collaboration",  network = "authors")),
-  tar_target(net_keyword, mkNetwork(sub_bib, analysis = "co-occurrences", network = "keywords")),
-  tar_target(net_ref, mkNetwork(sub_bib,     analysis = "co-citation",    network = "references")),
-  tar_target(net_src, mkNetwork(sub_bib,     analysis = "coupling",       network = "sources")),
+  tar_map(
+    unlist = FALSE,
+    values = tibble::tibble(
+      "fun"      = rlang::syms("mkNetwork"),
+      "analysis" = c("collaboration", "co-occurrences", "co-citation", "coupling"),
+      "network"  = c("authors", "keywords", "references", "sources")
+    ),
+    tar_target(network_bib, fun(sub_bib, analysis = analysis, network = network))
+  ),
 
   # Generate documentation
   tar_quarto(readme, "README.qmd", priority = 0)
