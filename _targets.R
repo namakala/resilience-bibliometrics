@@ -46,6 +46,22 @@ list(
     tar_target(network_bib, mkNetwork(sub_bib, analysis = analysis, network = network))
   ),
 
+  # Tokenize the abstract into unigram, bigram, and trigram
+  tar_map(
+    unlist = FALSE,
+    values = tibble::tibble("n" = (1:3)),
+    tar_target(token, tokenize(bib, wordlist = "data/ref/awl.txt", n = n)),
+    tar_target(token_count, countToken(token)),
+    tar_target(token_stat,  getTokenStat(token))
+  ),
+
+  # Create document-feature matrices
+  tar_map(
+    unlist = FALSE,
+    values = tibble::tibble(token = rlang::syms(paste("token", 1:3, sep = "_"))),
+    tar_target(dfm, mkDocMatrix(token, bib))
+  ),
+
   # Generate documentation
   tar_quarto(readme, "README.qmd", priority = 0)
 

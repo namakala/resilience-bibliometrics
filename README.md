@@ -45,13 +45,9 @@ This is the analysis pipeline for conducting analysis in an umbrella
 review. The complete flow can be viewed in the following `mermaid`
 diagram:
 
-- The project is out-of-sync – use `renv::status()` for details. During
-  startup - Warning messages: 1: Setting LC_COLLATE failed, using “C” 2:
-  Setting LC_TIME failed, using “C” 3: Setting LC_MESSAGES failed, using
-  “C” 4: Setting LC_MONETARY failed, using “C” Please note that our
-  software is open source and available for use, distributed under the
-  MIT license. When it is used in a publication, we ask that authors
-  properly cite the following reference:
+Please note that our software is open source and available for use,
+distributed under the MIT license. When it is used in a publication, we
+ask that authors properly cite the following reference:
 
 Aria, M. & Cuccurullo, C. (2017) bibliometrix: An R-tool for
 comprehensive science mapping analysis, Journal of Informetrics, 11(4),
@@ -84,20 +80,50 @@ graph LR
   subgraph Graph
     direction LR
     x2e3537559af5fbf8>"dedup"]:::uptodate --> x9e9a67411fa60786>"mergeBib"]:::uptodate
-    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> xd3f20a2f996e26ce(["network_bib_mkNetwork_co.occurrences_keywords"]):::uptodate
-    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> xd3f20a2f996e26ce(["network_bib_mkNetwork_co.occurrences_keywords"]):::uptodate
+    xe55316a1f7b4fae4>"tokenizeNgrams"]:::uptodate --> x86247b0b8f4cd373>"tokenize"]:::uptodate
+    x8c84eb080ccbef92>"countToken"]:::uptodate --> xc93041fcb624a462>"mkDocMatrix"]:::uptodate
+    x8c84eb080ccbef92>"countToken"]:::uptodate --> x5b3deeac8d9d74fb>"getTokenStat"]:::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> x07843bd95bfde64b(["dfm_token_1"]):::uptodate
+    xc93041fcb624a462>"mkDocMatrix"]:::uptodate --> x07843bd95bfde64b(["dfm_token_1"]):::uptodate
+    x3115d41a9a868779(["token_1"]):::uptodate --> x07843bd95bfde64b(["dfm_token_1"]):::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> xff02ab3affa8bcbd(["dfm_token_2"]):::uptodate
+    xc93041fcb624a462>"mkDocMatrix"]:::uptodate --> xff02ab3affa8bcbd(["dfm_token_2"]):::uptodate
+    xe379b3a87aa6402a(["token_2"]):::uptodate --> xff02ab3affa8bcbd(["dfm_token_2"]):::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> x124d63120f617387(["dfm_token_3"]):::uptodate
+    xc93041fcb624a462>"mkDocMatrix"]:::uptodate --> x124d63120f617387(["dfm_token_3"]):::uptodate
+    xf1bba0d245da2dfd(["token_3"]):::uptodate --> x124d63120f617387(["dfm_token_3"]):::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> xb8fe725f31aeab81(["network_bib_co.citation_references"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> xb8fe725f31aeab81(["network_bib_co.citation_references"]):::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> x3115d41a9a868779(["token_1"]):::uptodate
+    x86247b0b8f4cd373>"tokenize"]:::uptodate --> x3115d41a9a868779(["token_1"]):::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> xe379b3a87aa6402a(["token_2"]):::uptodate
+    x86247b0b8f4cd373>"tokenize"]:::uptodate --> xe379b3a87aa6402a(["token_2"]):::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> x08fd35004ffd1a5e(["network_bib_coupling_sources"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> x08fd35004ffd1a5e(["network_bib_coupling_sources"]):::uptodate
+    x2f7ce3a74217c3eb(["bib"]):::uptodate --> xf1bba0d245da2dfd(["token_3"]):::uptodate
+    x86247b0b8f4cd373>"tokenize"]:::uptodate --> xf1bba0d245da2dfd(["token_3"]):::uptodate
+    x5b3deeac8d9d74fb>"getTokenStat"]:::uptodate --> xcaaf7c7bd8e35ab0(["token_stat_1"]):::uptodate
+    x3115d41a9a868779(["token_1"]):::uptodate --> xcaaf7c7bd8e35ab0(["token_stat_1"]):::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> x8a9d43035347248b(["network_bib_co.occurrences_keywords"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> x8a9d43035347248b(["network_bib_co.occurrences_keywords"]):::uptodate
+    x5b3deeac8d9d74fb>"getTokenStat"]:::uptodate --> x4278c1afaa4bd567(["token_stat_2"]):::uptodate
+    xe379b3a87aa6402a(["token_2"]):::uptodate --> x4278c1afaa4bd567(["token_stat_2"]):::uptodate
+    x8c84eb080ccbef92>"countToken"]:::uptodate --> x0a25155295475de3(["token_count_1"]):::uptodate
+    x3115d41a9a868779(["token_1"]):::uptodate --> x0a25155295475de3(["token_count_1"]):::uptodate
+    x5b3deeac8d9d74fb>"getTokenStat"]:::uptodate --> x4c26d0b91e560ca7(["token_stat_3"]):::uptodate
+    xf1bba0d245da2dfd(["token_3"]):::uptodate --> x4c26d0b91e560ca7(["token_stat_3"]):::uptodate
+    x8c84eb080ccbef92>"countToken"]:::uptodate --> x4a99a33f2cffd9a2(["token_count_2"]):::uptodate
+    xe379b3a87aa6402a(["token_2"]):::uptodate --> x4a99a33f2cffd9a2(["token_count_2"]):::uptodate
+    x8c84eb080ccbef92>"countToken"]:::uptodate --> x1bf731753ea8de12(["token_count_3"]):::uptodate
+    xf1bba0d245da2dfd(["token_3"]):::uptodate --> x1bf731753ea8de12(["token_count_3"]):::uptodate
     xb2d44098e9dbb607(["bibs"]):::uptodate --> x2f7ce3a74217c3eb(["bib"]):::uptodate
     x9e9a67411fa60786>"mergeBib"]:::uptodate --> x2f7ce3a74217c3eb(["bib"]):::uptodate
-    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> xbdb58136cfeec83a(["network_bib_mkNetwork_collaboration_authors"]):::uptodate
-    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> xbdb58136cfeec83a(["network_bib_mkNetwork_collaboration_authors"]):::uptodate
     x2f7ce3a74217c3eb(["bib"]):::uptodate --> x5d0137cf25dee142(["analyzed_bib"]):::uptodate
+    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> xf693832e59b3c0b7(["network_bib_collaboration_authors"]):::uptodate
+    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> xf693832e59b3c0b7(["network_bib_collaboration_authors"]):::uptodate
     xffb09e21cb2bb0ec>"readBib"]:::uptodate --> xb2d44098e9dbb607(["bibs"]):::uptodate
     xc5a9e5584c3f223f{{"ref"}}:::uptodate --> xb2d44098e9dbb607(["bibs"]):::uptodate
-    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> x1f29d4abcfe1d32a(["network_bib_mkNetwork_coupling_sources"]):::uptodate
-    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> x1f29d4abcfe1d32a(["network_bib_mkNetwork_coupling_sources"]):::uptodate
     x2f7ce3a74217c3eb(["bib"]):::uptodate --> x1592aa0a5fd55f23(["sub_bib"]):::uptodate
-    xe8106633484dc4fe>"mkNetwork"]:::uptodate --> x3d74a378a58dff6e(["network_bib_mkNetwork_co.citation_references"]):::uptodate
-    x1592aa0a5fd55f23(["sub_bib"]):::uptodate --> x3d74a378a58dff6e(["network_bib_mkNetwork_co.citation_references"]):::uptodate
     x6e52cb0f1668cc22(["readme"]):::started --> x6e52cb0f1668cc22(["readme"]):::started
     x2d15849e3198e8d1{{"pkgs"}}:::uptodate --> x2d15849e3198e8d1{{"pkgs"}}:::uptodate
     x22b0201614333ef4{{"fun"}}:::uptodate --> x22b0201614333ef4{{"fun"}}:::uptodate
@@ -109,7 +135,7 @@ graph LR
   linkStyle 1 stroke-width:0px;
   linkStyle 2 stroke-width:0px;
   linkStyle 3 stroke-width:0px;
-  linkStyle 19 stroke-width:0px;
-  linkStyle 20 stroke-width:0px;
-  linkStyle 21 stroke-width:0px;
+  linkStyle 49 stroke-width:0px;
+  linkStyle 50 stroke-width:0px;
+  linkStyle 51 stroke-width:0px;
 ```
