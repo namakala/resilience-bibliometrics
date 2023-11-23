@@ -137,13 +137,112 @@ mkDocMatrix <- function(token, bib = NULL) {
   #' @param bib A bibliography data frame from exported query results
   #' @return A document feature matrix object for topic modelling
   tbl <- countToken(token, summarize = FALSE)
+  doi <- unique(tbl$doi)
   dfm <- tidytext::cast_dfm(tbl, document = "doi", term = "word", value = "n")
 
   if (!is.null(bib)) {
+    bib %<>% subset(.$DI %in% doi)
+    quanteda::meta(dfm, "doi")      <- bib$DI
     quanteda::meta(dfm, "title")    <- bib$TI
     quanteda::meta(dfm, "keywords") <- bib$DE
     quanteda::meta(dfm, "source")   <- bib$SO
   }
 
   return(dfm)
+}
+
+genTopic <- function(dfm, ...) {
+  #' Generate Topics
+  #'
+  #' Generate topics using unsupervised learning approach with structural topic
+  #' model (STM). STM is preferred to LSA, PLSA, or CTM due to its speed
+  #' and support of meta data uses.
+  #'
+  #' @param dfm A document-feature matrix object for topic modelling, usually
+  #' the output of `mkDocMatrix` or `tidytext::cast_dfm`
+  #' @return A fitted STM object
+  doc  <- quanteda::convert(dfm, to = "stm")
+  doi  <- doc$documents %>% names()
+  meta <- quanteda::meta(dfm) %>% data.frame()
+
+  mod  <- tryCatch(
+    stm::stm(
+      documents = doc$documents,
+      vocab     = doc$vocab,
+      data      = meta,
+      init.type = "Spectral",
+      ...
+    ), error = function(e) {
+      message(e)
+      stm::stm(
+        documents = doc$documents,
+        vocab     = doc$vocab,
+        data      = meta,
+        init.type = "LDA",
+        ...
+      )
+    }
+  )
+
+  mod$doi <- doi
+
+  return(mod)
+}
+
+getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
+  #' Get Generated Topics
+  #'
+  #' Extract generated topics from the model. This function takes STM model as
+  #' an input. If the model is generatd using `genTopic` function, it should
+  #' have one additional field: `doi`, indicating the DOI number of the
+  #' included documents. This DOI number will be assigned when extracting the
+  #' gamma values.
+  #'
+  #' @param mod An STM object, usually the output of `genTopic` function
+  #' @param type A character object signifying the type of matrix to export, currently supporting "beta" and
+  #' "gamma"
+  #' @param truncate Whether to return only the truncated version, i.e. by
+  #' selecting `n` most occuring ones
+  #' @param n The number of subset to select in a truncated data
+  #' @return A data frame of topic and its probability either in beta or gamma
+  #' distribution, depends on the `type` parameter
+  require("dplyr")
+
+  if (type == "beta") {
+
+    res <- tidytext:::tidy_stm_beta(mod, log = FALSE) %>%
+      set_names(c("topic", "term", "prob"))
+
+    sub_res <- res %>%
+      group_by(topic) %>%
+      slice_max(prob, n = n) %>%
+      ungroup() %>%
+      arrange(topic, -prob)
+
+  } else if (type == "gamma") {
+
+    doi <- NULL
+    if (with(mod, exists("doi"))) {
+      doi <- mod$doi
+    }
+
+    res <- tidytext:::tidy_stm_gamma(mod, log = FALSE, document_names = doi) %>%
+      set_names(c("doi", "topic", "prob"))
+
+    sub_res <- res %>%
+      group_by(doi) %>%
+      ungroup() %>%
+      arrange(doi, -prob)
+
+  } else {
+
+    stop("Type is not supported")
+
+  }
+
+  if (truncate) {
+    return(sub_res)
+  }
+
+  return(res)
 }
