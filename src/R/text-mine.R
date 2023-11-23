@@ -240,6 +240,8 @@ getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
 
   }
 
+  res %<>% inset("ntopic", value = max(.$topic))
+
   if (truncate) {
     return(sub_res)
   }
