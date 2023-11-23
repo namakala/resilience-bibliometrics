@@ -57,12 +57,15 @@ mergeBib <- function(bibs, ...) {
 
   # Merge bibliography data frames
   bib <- Reduce(\(x, y) merge(x, y, all = TRUE, ...), bibs) %>%
-    subset(!is.na(.$DI), select = wos_field) %>% # Select only WoS fields
+    subset(!{is.na(.$DI) | .$DI == ""}, select = wos_field) %>% # Select only WoS fields
     inset( # Count complete information within an entry
       "n_field",
       value = {
         apply(., 1, \(x) {!is.na(x)} %>% sum())
       }
+    ) %>%
+    inset( # Standardize the DOI to use upper cases
+      "DI", value = stringr::str_to_upper(.$DI)
     )
 
   # Reorder based on completeness
