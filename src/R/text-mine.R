@@ -231,6 +231,7 @@ getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
 
     sub_res <- res %>%
       group_by(doi) %>%
+      slice_max(prob, n = n) %>%
       ungroup() %>%
       arrange(doi, -prob)
 

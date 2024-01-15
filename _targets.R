@@ -63,8 +63,8 @@ list(
     tar_target(eval_summary,   do.call(rbind, eval_summaries) %>% data.frame()),
     tar_target(optim_param, selTopicParam(eval_summary)),
     tar_target(topic_label, getLabel(stm[[optim_param]])),
-    tar_target(topic_token, getTopic(stm[[optim_param]])),
-    tar_target(topic_doc,   getTopic(stm[[optim_param]], type = "gamma"))
+    tar_target(topic_token, getTopic(stm[[optim_param]], n = 10)),
+    tar_target(topic_doc,   getTopic(stm[[optim_param]], type = "gamma", n = 1))
   ),
 
   # Generate documentation
