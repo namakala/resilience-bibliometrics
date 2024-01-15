@@ -248,3 +248,57 @@ getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
 
   return(res)
 }
+
+evalTopic <- function(stm, dfm) {
+  #' Evaluate Topic Model
+  #'
+  #' Evaluate the generated topic from the stuctural topic model using the
+  #' document-frequency matrix as a reference
+  #'
+  #' @param stm A STM model, usually an output of `stm::stm` or `genTopic`
+  #' @param dfm A document-frequency matrix, usually an output of `mkDocMatrix`
+  #' @return A measure of semantic coherence and eclusivity as provided by
+  #' `stm::semanticCoherenc` and `stm::exclusivity`
+
+  res <- tibble::tibble(
+    "coh" = stm::semanticCoherence(model = stm, documents = dfm),
+    "exc" = stm::exclusivity(model = stm)
+  )
+
+  return(res)
+
+}
+
+selTopicParam <- function(eval_summary) {
+  #' Select Topic Param
+  #'
+  #' Select topic parameters that maximize both semantic coherence and
+  #' exclusivity (FREX)
+  #'
+  #' @param eval_summary The summary obtained by finding the mean value for
+  #' each column from the output of `evalTopic`
+  #' @return A numeric value indicating the branch with optimum params
+  tbl <- eval_summary
+
+  tbl %<>% lapply(function(varname) {
+    varname %>% {{. - min(.)} / {max(.) - min(.)}}
+  }) %>%
+    data.frame()
+
+  argmax <- rowSums(tbl) %>% {which(. == max(.))}
+
+  return(argmax)
+}
+
+getLabel <- function(stm, ...) {
+  #' Get Label
+  #'
+  #' Get label associated with a topic from an STM model
+  #'
+  #' @param stm A fitted STM object
+  #' @inheritDotParams stm::labelTopics
+  #' @return A labelTopics object (list)
+  res <- stm::labelTopics(stm, n = 10)
+
+  return(res)
+}

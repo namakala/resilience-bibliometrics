@@ -58,8 +58,13 @@ list(
     tar_target(token_stat,  getTokenStat(token)),
     tar_target(dfm, mkDocMatrix(token, bib)),
     tar_target(stm, genTopic(dfm, K = ntopic, seed = seed), pattern = map(ntopic), iteration = "list"),
-    tar_target(topic_token, getTopic(stm), pattern = map(stm), iteration = "list"),
-    tar_target(topic_doc,   getTopic(stm, type = "gamma"), pattern = map(stm), iteration = "list")
+    tar_target(eval_topic,  evalTopic(stm, dfm),  pattern = map(stm), iteration = "list"),
+    tar_target(eval_summaries, colMeans(eval_topic), pattern = map(eval_topic), iteration = "list"),
+    tar_target(eval_summary,   do.call(rbind, eval_summaries) %>% data.frame()),
+    tar_target(optim_param, selTopicParam(eval_summary)),
+    tar_target(topic_label, getLabel(stm[[optim_param]])),
+    tar_target(topic_token, getTopic(stm[[optim_param]])),
+    tar_target(topic_doc,   getTopic(stm[[optim_param]], type = "gamma"))
   ),
 
   # Generate documentation
