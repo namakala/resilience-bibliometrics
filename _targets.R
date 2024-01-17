@@ -59,12 +59,22 @@ list(
     # Extract labels
     tar_target(topic_label, getLabel(stm[[optim_param]], summarize = TRUE)),
     tar_target(topic_token, getTopic(stm[[optim_param]], n = 10)),
-    tar_target(topic_doc,   getTopic(stm[[optim_param]], type = "gamma", n = 1))
+    tar_target(topic_doc,   getTopic(stm[[optim_param]], type = "gamma", n = 1)),
+
+    # Flatten the token for data augmenting
+    tar_target(token_flat, flatten(token, "doi", "word", collapse = "; "))
 
   ),
 
   # Augment topic to the bibliometrics data frame
-  tar_target(bib_aug, augmentBib(bib, list(topic_doc_1, topic_doc_2, topic_doc_3))),
+  tar_target(
+    bib_aug,
+    augmentBib(
+      bib,
+      topic_doc = list(topic_doc_1, topic_doc_2, topic_doc_3),
+      token     = list(token_flat_1, token_flat_2, token_flat_3)
+    )
+  ),
 
   # Reference data from WoS for network analysis
   tar_target(sub_bib, bib_aug %>% subset(.$DB == "ISI")),

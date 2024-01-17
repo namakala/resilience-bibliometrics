@@ -98,27 +98,83 @@ dedup <- function(bib, ...) {
   return(sub_bib)
 }
 
-augmentBib <- function(bib, topic_docs) {
+flatten <- function(tbl, ref, varname, ...) {
+  #' Flatten the Data Frame
+  #'
+  #' Flatten the data frame by grouping and collapsing target column. The data
+  #' frame should only contain two columns, as this function is not well tested
+  #' on larger data frames.
+  #'
+  #' @param tbl A data frame
+  #' @param ref A character vector signifying the name of reference column for
+  #' grouping
+  #' @param varname A character vector signifying the name of column to flatten
+  #' @inheritDotParams base::paste
+  #' @return A tidy data frame
+
+  res <- tbl %>%
+    tibble::tibble() %>%
+    dplyr::group_by(get(ref)) %>%
+    dplyr::summarise(varname = paste(get(varname), ...)) %>%
+    set_colnames(c(ref, varname))
+
+  return(res)
+}
+
+mergeByDOI <- function(tbls) {
+  #' Merge By DOI
+  #'
+  #' Merge a list of tidy data frames by the column DOI
+  #'
+  #' @param tbls A list of tidy data frames
+  #' @return A tidy data frame with the DOI column
+  tbl <- purrr::reduce(
+    .f = \(x, y) dplyr::inner_join(x, y, by = "doi", suffix = c("1", "2")), .x = tbls
+  )
+
+  return(tbl)
+}
+
+augToBib <- function(bib, tbl) {
+  #' Augment Bibliometric File
+  #'
+  #' Augment the bibliometric data frame with bagged tokens
+  #'
+  #' @param bib A bibliometric data frame
+  #' @param tbl A tidy data frame with the DOI column
+  #' @return An augmented bibliometric data frame
+
+  if (any(class(tbl) == "list")) {
+    tbl %<>% mergeByDOI
+  }
+
+  bib_aug <- dplyr::inner_join(bib, tbl, by = c("DI" = "doi"))
+
+  return(bib_aug)
+}
+
+augmentBib <- function(bib, topic_doc = NULL, token = NULL) {
   #' Augment Bibliometric File
   #'
   #' Augment the bibliometricc data frame with topics from STM
   #'
   #' @param bib A bibliometric data frame
-  #' @param topic_docs Topic per document object, usually the output drawn from
+  #' @param topic_doc Topic per document object, usually the output drawn from
   #' the gamma distribution. Could be a single object or a list of multiple
   #' topic docs.
+  #' @param token Bagged token, usually the output of `tokenize`
   #' @return An augmented bibliometric data frame
-  if (any(class(topic_docs) == "list")) {
-    topic_doc <- purrr::reduce(
-      .f = \(x, y) dplyr::inner_join(x, y, by = "doi"), .x = topic_docs
-    )
 
-    bib_aug <- augmentBib(bib, topic_doc)
-
-    return(bib_aug)
+  if (!is.null(topic_doc)) {
+    bib %<>% augToBib(topic_doc)
   }
 
-  bib_aug <- dplyr::inner_join(bib, topic_docs, by = c("DI" = "doi"))
+  if (!is.null(token)) {
+    token %<>% mergeByDOI()
+    bib   %<>% augToBib(token)
+  }
+
+  bib_aug <- bib
 
   return(bib_aug)
 }

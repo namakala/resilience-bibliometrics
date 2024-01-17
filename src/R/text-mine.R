@@ -312,8 +312,7 @@ getLabel <- function(stm, summarize = FALSE, ...) {
 
   res <- topic_label %>% lapply(function(label) {
       data.frame("weight" = metrics, "token" = label) %>%
-        dplyr::group_by(weight) %>%
-        dplyr::summarise("token" = paste(token, collapse = ", ")) %>%
+        flatten("weight", "token", collapse = ", ") %>%
         data.frame()
     })
   
