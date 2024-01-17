@@ -2576,6 +2576,19 @@
       ],
       "Hash": "877508719fcb8c9525eccdadf07a5102"
     },
+    "textdata": {
+      "Package": "textdata",
+      "Version": "0.4.4",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "fs",
+        "rappdirs",
+        "readr",
+        "tibble"
+      ],
+      "Hash": "c94c6cafedd394e259193d548a6f5945"
+    },
     "tibble": {
       "Package": "tibble",
       "Version": "3.2.1",
