@@ -57,7 +57,7 @@ tokenizeNgrams <- function(abstract, n, stopword = NULL) {
     filter <- FALSE # Will return all entries if no stopword is used
   }
 
-  token_filtered <- tokens %>% subset(!filter)
+  token_filtered <- tokens %>% subset(!{filter | grepl(x = .$word, "\\d")})
 
   combined_token <- paste0("token_filtered$word", 1:n) %>%
     paste(collapse = ", ") %>%
