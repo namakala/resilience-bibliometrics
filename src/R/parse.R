@@ -97,3 +97,28 @@ dedup <- function(bib, ...) {
 
   return(sub_bib)
 }
+
+augmentBib <- function(bib, topic_docs) {
+  #' Augment Bibliometric File
+  #'
+  #' Augment the bibliometricc data frame with topics from STM
+  #'
+  #' @param bib A bibliometric data frame
+  #' @param topic_docs Topic per document object, usually the output drawn from
+  #' the gamma distribution. Could be a single object or a list of multiple
+  #' topic docs.
+  #' @return An augmented bibliometric data frame
+  if (any(class(topic_docs) == "list")) {
+    topic_doc <- purrr::reduce(
+      .f = \(x, y) dplyr::inner_join(x, y, by = "doi"), .x = topic_docs
+    )
+
+    bib_aug <- augmentBib(bib, topic_doc)
+
+    return(bib_aug)
+  }
+
+  bib_aug <- dplyr::inner_join(bib, topic_docs, by = c("DI" = "doi"))
+
+  return(bib_aug)
+}

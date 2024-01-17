@@ -9,6 +9,8 @@ mkNetwork <- function(bib, ...) {
   #' @param bib A bibliometrics data frame
   #' @inheritDotParams bibliometrix::biblioNetwork
   #' @return A bibliometrics network object
+  require("bibliometrix")
+
   net_bib <- biblioNetwork(bib, short = TRUE, ...)
 
   return(net_bib)

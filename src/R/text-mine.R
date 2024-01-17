@@ -291,15 +291,43 @@ selTopicParam <- function(eval_summary) {
   return(argmax)
 }
 
-getLabel <- function(stm, ...) {
+getLabel <- function(stm, summarize = FALSE, ...) {
   #' Get Label
   #'
   #' Get label associated with a topic from an STM model
   #'
   #' @param stm A fitted STM object
+  #' @param summarize Boolean to indicate whether to summarize all labels as
+  #' one data frame or not
   #' @inheritDotParams stm::labelTopics
   #' @return A labelTopics object (list)
-  res <- stm::labelTopics(stm, n = 10)
+  topic_label <- stm::labelTopics(stm, n = 10, ...) %>%
+    extract(c(1, 4, 3, 2)) %>% # Remove unnecessary field, reorder the list
+    data.frame() %>%
+    t() %>%
+    data.frame() %>%
+    set_colnames(1:ncol(.))
+
+  metrics <- gsub(x = rownames(topic_label), "\\..*", "")
+
+  res <- topic_label %>% lapply(function(label) {
+      data.frame("weight" = metrics, "token" = label) %>%
+        dplyr::group_by(weight) %>%
+        dplyr::summarise("token" = paste(token, collapse = ", ")) %>%
+        data.frame()
+    })
+  
+  if (summarize) {
+    res %<>%
+      {do.call(rbind, .)} %>%
+      tibble::add_column(
+        "topic" = gsub(x = rownames(.), "\\..*", ""),
+        .before = 1
+      ) %>%
+      tibble::tibble()
+  } else {
+    res %<>% lapply(tibble::tibble)
+  }
 
   return(res)
 }
