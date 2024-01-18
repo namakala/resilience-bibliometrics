@@ -145,7 +145,7 @@ augToBib <- function(bib, tbl) {
   #' @return An augmented bibliometric data frame
 
   if (any(class(tbl) == "list")) {
-    tbl %<>% mergeByDOI
+    tbl %<>% mergeByDOI()
   }
 
   bib_aug <- dplyr::inner_join(bib, tbl, by = c("DI" = "doi"))
@@ -170,8 +170,7 @@ augmentBib <- function(bib, topic_doc = NULL, token = NULL) {
   }
 
   if (!is.null(token)) {
-    token %<>% mergeByDOI()
-    bib   %<>% augToBib(token)
+    bib %<>% augToBib(token)
   }
 
   bib_aug <- bib

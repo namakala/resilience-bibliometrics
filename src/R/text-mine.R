@@ -46,6 +46,8 @@ tokenizeNgrams <- function(abstract, n, stopword = NULL) {
     unnest_tokens(input = "abstract", output = "word", token = "ngrams", n = n) %>%
     subset(!is.na(.$word))
 
+  has_number <- grepl(x = token$word, "\\d")
+
   tokens <- token %>%
     tidyr::separate(word, paste0("word", 1:n), sep = " ")
 
@@ -57,7 +59,7 @@ tokenizeNgrams <- function(abstract, n, stopword = NULL) {
     filter <- FALSE # Will return all entries if no stopword is used
   }
 
-  token_filtered <- tokens %>% subset(!{filter | grepl(x = .$word, "\\d")})
+  token_filtered <- tokens %>% subset(!{filter | has_number})
 
   combined_token <- paste0("token_filtered$word", 1:n) %>%
     paste(collapse = ", ") %>%
@@ -241,7 +243,11 @@ getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
 
   }
 
-  sub_res %<>% inset("ntopic", value = max(.$topic))
+  sub_res %<>%
+    lapply(as.character) %>%
+    data.frame() %>%
+    tibble::tibble() %>%
+    inset("ntopic", value = max(as.numeric(.$topic)))
 
   if (truncate) {
     return(sub_res)

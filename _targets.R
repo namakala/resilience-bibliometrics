@@ -2,15 +2,15 @@
 pkgs <- c("magrittr", "targets", "tarchetypes", "bibliometrix", "crew")
 sapply(pkgs, library, character.only = TRUE)
 
+# Source all functions
+fun <- list.files("src/R", recursive = TRUE, full.names = TRUE, pattern = "*.R") %>%
+  sapply(source)
+
 # List all references
 ref <- list.files(
     "data/raw", recursive = TRUE, full.names = TRUE, pattern = "*.(csv|txt|bib)"
   ) %>%
   set_names(gsub(x = ., ".*/|\\..+", ""))
-
-# Source all functions
-fun <- list.files("src/R", recursive = TRUE, full.names = TRUE, pattern = "*.R") %>%
-  sapply(source)
 
 # Set option for targets
 tar_option_set(
@@ -83,14 +83,24 @@ list(
   tar_map(
     unlist = FALSE,
     values = tibble::tibble(
-      "analysis" = c("collaboration", "co-occurrences", "co-citation", "coupling"),
-      "network"  = c("authors", "keywords", "references", "sources")
+      "analysis" = c("collaboration", "co-occurrences", "co-citation"),
+      "network"  = c("authors", "keywords", "references")
     ),
-    tar_target(net_bib, mkNetwork(sub_bib, analysis = analysis, network = network)),
-    tar_target(net_stat, networkStat(net_bib))
+    tar_target(net_bib, mkNetwork(sub_bib, analysis = analysis, network = network, short = TRUE))
   ),
 
   tar_target(net_bib_plt, vizNetwork(net_bib_collaboration_authors, n = 200)),
+
+  # Generate coupling networks for all unique entry
+  tar_map(
+    unlist = FALSE,
+    values = tidyr::expand_grid(
+      "coupling"      = paste0("topic", c("1", "2", "")),
+      "network_field" = "DI"
+    ),
+    tar_target(net_coupling, mkNetwork(sub_bib, coupling = coupling, network_field = network_field)),
+    tar_target(graph_coupling, igraph::graph.adjacency(net_coupling) %>% tidygraph::as_tbl_graph())
+  ),
 
   # Generate historical direct citation network for papers cited at least 1000x
   tar_target(net_hist, histNetwork(sub_bib, min.citations = 1000, sep = ";")),
