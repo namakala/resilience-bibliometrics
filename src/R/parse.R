@@ -115,7 +115,7 @@ flatten <- function(tbl, ref, varname, ...) {
   res <- tbl %>%
     tibble::tibble() %>%
     dplyr::group_by(get(ref)) %>%
-    dplyr::summarise(varname = paste(get(varname), ...)) %>%
+    dplyr::summarize(varname = paste(get(varname), ...)) %>%
     set_colnames(c(ref, varname))
 
   return(res)
@@ -129,7 +129,8 @@ mergeByDOI <- function(tbls) {
   #' @param tbls A list of tidy data frames
   #' @return A tidy data frame with the DOI column
   tbl <- purrr::reduce(
-    .f = \(x, y) dplyr::inner_join(x, y, by = "doi", suffix = c("1", "2")), .x = tbls
+    .f = \(x, y) dplyr::inner_join(x, y, by = "doi", suffix = c("1", "2")),
+    .x = tbls
   )
 
   return(tbl)

@@ -91,15 +91,11 @@ list(
 
   tar_target(net_bib_plt, vizNetwork(net_bib_collaboration_authors, n = 200)),
 
-  # Generate coupling networks for all unique entry
+  # Map the theme based on coupled DOI on modelled topics
   tar_map(
     unlist = FALSE,
-    values = tidyr::expand_grid(
-      "coupling"      = paste0("topic", c("1", "2", "")),
-      "network_field" = "DI"
-    ),
-    tar_target(net_coupling, mkNetwork(sub_bib, coupling = coupling, network_field = network_field)),
-    tar_target(graph_coupling, igraph::graph.adjacency(net_coupling) %>% tidygraph::as_tbl_graph())
+    values = tibble::tibble("topic" = paste0("topic", c("1", "2", ""))),
+    tar_target(map_bib, mapTheme(sub_bib, topic_var = topic))
   ),
 
   # Generate historical direct citation network for papers cited at least 1000x
