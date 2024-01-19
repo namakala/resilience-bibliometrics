@@ -158,7 +158,7 @@ vizTheme <- function(theme) {
   emerging <- "The role of the environment and society starts to emerge in \nlinking childhood trauma to resilience."
   basic <- "Suicidal ideation and cognitive function after traumatic events \nare the basic theme in resilience research."
   niche <- "The basic of psychological resilience remains as a niche topic. \nVarious studies have been published, yet not highly cited."
-  motor <- "Research in resilience is mostly active in elucidating how traumatic \nevent in children affects mental health."
+  motor <- "Research in resilience is mostly active in elucidating how traumatic \nevent in children affects their mental health."
 
   modx <- 0.2
 
