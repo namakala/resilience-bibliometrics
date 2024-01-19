@@ -58,7 +58,7 @@ vizNetwork <- function(...) {
   #' Plot bibliographic networks from the `biblioNetwork` function
   #'
   #' @param ... Parameters being passed on to `getGraph`
-  #' @return A list containing graph object and its clusters
+  #' @return A GGPlot2 object
   require("bibliometrix")
   require("ggraph")
 
@@ -73,5 +73,60 @@ vizNetwork <- function(...) {
     geom_node_text(aes(label = label, size = node / 3), alpha = alpha, repel = TRUE, max.overlaps = Inf) +
     theme(legend.position = "none")
   
+  return(plt)
+}
+
+vizTheme <- function(map_bib, topic_label) {
+  #' Plot Thematic Map
+  #'
+  #' Plot the thematic map of modelled topics
+  #'
+  #' @param map_bib A thematic map data frame, usually the output of `mapTheme`
+  #' @param topic_label A labelTopics object, usually the output of `getLabel`
+  #' @param A GGPlot2 object
+  require("ggplot2")
+
+  mid <- with(map_bib, list("x" = rank_central, "y" = rank_dense) %>% lapply(mean))
+
+  label <- topic_label %>%
+    subset(.$weight == "prob", select = -weight) %>%
+    dplyr::mutate("token" = gsub(x = token, ";.*", ""))
+  
+  tbl <- map_bib %>%
+    dplyr::inner_join(label, by = c("group" = "topic")) %>%
+    dplyr::mutate(
+      "group" = as.numeric(group),
+      "theme" = dplyr::case_when(
+        rank_central < mid$x & rank_dense < mid$y ~ "Emerging",
+        rank_central > mid$x & rank_dense < mid$y ~ "Basic",
+        rank_central < mid$x & rank_dense > mid$y ~ "Niche",
+        rank_central > mid$x & rank_dense > mid$y ~ "Motor"
+      )
+    ) %>%
+    dplyr::group_by(theme, year) %>%
+    dplyr::mutate( # Create visual cues based on grouping
+      "alpha" = ifelse(theme == "Motor", 0.8, 0.5),
+      "size"  = regularize(n) %>% {ifelse(is.na(.), 0, .)} %>% exp(),
+      "rank"  = rank(-size, ties.method = "first")
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate( # Adjusting size after ungrouping
+      "size" = regularize(n) + size
+    )
+
+  plt <- tbl %>%
+    ggplot(aes(x = rank_central, y = rank_dense, color = year)) +
+    geom_hline(yintercept = mid$y, linetype = 2, color = "grey70") +
+    geom_vline(xintercept = mid$x, linetype = 2, color = "grey70") +
+    geom_jitter(aes(size = size), alpha = tbl$alpha, width = 0.1, height = 0.1) +
+    #geom_point(aes(size = size), alpha = tbl$alpha) +
+    ggrepel::geom_text_repel(aes(label = token, size = size), alpha = tbl$alpha) +
+    theme(
+      axis.ticks = element_blank(),
+      axis.text  = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_blank()
+    )
+
   return(plt)
 }

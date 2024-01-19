@@ -95,7 +95,7 @@ list(
   tar_map(
     unlist = FALSE,
     values = tibble::tibble("topic" = paste0("topic", c("1", "2", ""))),
-    tar_target(map_bib, mapTheme(sub_bib, topic_var = topic))
+    tar_target(map_bib, mapTheme(sub_bib, cluster = topic), deployment = "main")
   ),
 
   # Generate historical direct citation network for papers cited at least 1000x

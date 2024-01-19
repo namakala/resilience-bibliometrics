@@ -49,7 +49,7 @@ mkNetwork <- function(bib, short = FALSE, ...) {
   return(net_bib)
 }
 
-mapTheme <- function(aug_bib, topic_var) {
+mapTheme <- function(aug_bib, cluster) {
   #' Map Bibliographic Theme
   #'
   #' Map the bibliographic theme based on given bibliometric data frame. The
@@ -59,18 +59,27 @@ mapTheme <- function(aug_bib, topic_var) {
   #'
   #' @param bib An augmented bibliometric data frame, usually the output of
   #' `augmentBib`
-  #' @param topic_var Column name of topic groups in an augmented bibliometric data
+  #' @param cluster Column name of topic groups in an augmented bibliometric data
   #' frame
   #' @return A thematic map data frame
   require("bibliometrix")
 
   # Extract node names and grouping clusters
   cluster <- aug_bib %>%
-    subset(select = c("DI", topic_var)) %>%
-    set_names(c("node", "group"))
+    subset(select = c("DI", cluster, "PY")) %>%
+    set_names(c("node", "group", "year")) %>%
+    dplyr::mutate(
+      "year" = cut(
+         year,
+         right  = FALSE,
+         breaks = c(-Inf, 2000, 2011, Inf),
+         labels = c("< 2000", "2000-2010", "> 2010"),
+         ordered_result = TRUE
+      )
+    )
 
   # Create bibliographic network matrix
-  net   <- mkNetwork(aug_bib, coupling = topic_var, network_field = "DI")
+  net   <- mkNetwork(aug_bib, coupling = "ID", network_field = "DI")
   index <- rownames(net) %in% cluster$node
 
   # Normalize the association strength, subset based on indices
@@ -79,26 +88,34 @@ mapTheme <- function(aug_bib, topic_var) {
   # Convert to data frame containing graph's nodes and edges
   tbl <- mtx %>%
     Matrix::triu() %>% # Convert the lower triangle to zeroes
-    as.matrix %>%
+    as.matrix() %>%
     data.frame(check.names = FALSE) %>%
     dplyr::mutate("from" = colnames(mtx)) %>%
     tidyr::pivot_longer(cols = !from, names_to = "to", values_to = "edge") %>%
     dplyr::filter(edge > 0) %>%
     dplyr::left_join(cluster, by = c("from" = "node")) %>%
     dplyr::left_join(cluster, by = c("to"   = "node")) %>%
-    dplyr::rename(group_from = group.x, group_to = group.y)
+    dplyr::rename(
+      group = group.x,
+      group_to   = group.y,
+      year  = year.x,
+      year_to    = year.y
+    )
 
   # Calculate centrality and density
   tbl_res <- tbl %>%
-    dplyr::group_by(group_from) %>%
-    dplyr::mutate("ext" = as.numeric(group_from != group_to)) %>%
+    dplyr::group_by(year, group) %>%
+    dplyr::mutate("ext" = as.numeric(group != group_to)) %>%
     dplyr::summarize(
-      "n"            = unique(from) %>% length(),
-      "centrality"   = sum(edge * ext),
-      "density"      = sum({edge * (1 - ext) / n} * 100),
+      "n"          = unique(from) %>% length(),
+      "centrality" = sum(edge * ext),
+      "density"    = sum({edge * (1 - ext) / n} * 100)
+    ) %>%
+    dplyr::mutate(
       "rank_central" = rank(centrality),
       "rank_dense"   = rank(density)
-    )
+    ) %>%
+    dplyr::ungroup()
 
   return(tbl_res)
 }
