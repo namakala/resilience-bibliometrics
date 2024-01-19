@@ -102,6 +102,17 @@ list(
   tar_target(net_hist, histNetwork(sub_bib, min.citations = 1000, sep = ";")),
   tar_target(net_hist_plt, histPlot(net_hist, n = 15, size = 10, labelsize = 5)),
 
+  # Generate thematic map
+  tar_target(
+    theme,
+    getTheme(
+      list(map_bib_topic1, map_bib_topic2),
+      list(topic_label_1, topic_label_2)
+    )
+  ),
+
+  tar_target(theme_plt, vizTheme(theme)),
+
   # Generate documentation
   tar_quarto(readme, "README.qmd", priority = 0)
 

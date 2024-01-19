@@ -76,22 +76,46 @@ vizNetwork <- function(...) {
   return(plt)
 }
 
-vizTheme <- function(map_bib, topic_label) {
+getTheme <- function(map_bib, topic_label) {
   #' Plot Thematic Map
   #'
   #' Plot the thematic map of modelled topics
   #'
   #' @param map_bib A thematic map data frame, usually the output of `mapTheme`
   #' @param topic_label A labelTopics object, usually the output of `getLabel`
-  #' @param A GGPlot2 object
-  require("ggplot2")
+  #' @return A tidy data frame
 
-  mid <- with(map_bib, list("x" = rank_central, "y" = rank_dense) %>% lapply(mean))
+  if (any(class(map_bib) == "list") & any(class(topic_label) == "list")) {
+
+    theme <- mapply(
+      function(map, topic) {
+        getTheme(map, topic)
+      },
+      map = map_bib,
+      topic = topic_label,
+      SIMPLIFY = FALSE
+    )
+
+    tbl <- lapply(theme, "[[", "tbl") %>% {do.call(rbind, .)}
+    mid <- lapply(theme, "[[", "mid") %>% {do.call(rbind, .)} %>%
+      colMeans() %>%
+      t() %>%
+      data.frame()
+
+    theme <- list("mid" = mid, "tbl" = tbl)
+
+    return(theme)
+  }
 
   label <- topic_label %>%
     subset(.$weight == "prob", select = -weight) %>%
-    dplyr::mutate("token" = gsub(x = token, ";.*", ""))
+    dplyr::mutate("token" = gsub(x = token, ";.*", "") %>% stringr::str_to_upper())
   
+  mid <- with(
+    map_bib, list("x" = rank_central, "y" = rank_dense) %>% lapply(mean)
+  ) %>%
+    data.frame()
+
   tbl <- map_bib %>%
     dplyr::inner_join(label, by = c("group" = "topic")) %>%
     dplyr::mutate(
@@ -105,22 +129,60 @@ vizTheme <- function(map_bib, topic_label) {
     ) %>%
     dplyr::group_by(theme, year) %>%
     dplyr::mutate( # Create visual cues based on grouping
-      "alpha" = ifelse(theme == "Motor", 0.8, 0.5),
-      "size"  = regularize(n) %>% {ifelse(is.na(.), 0, .)} %>% exp(),
-      "rank"  = rank(-size, ties.method = "first")
+      "size"  = regularize(n) %>% {ifelse(is.na(.), 0, .)} %>% exp() %>% exp(),
+      "rank"  = rank(size, ties.method = "first"),
+      "alpha" = {ifelse(theme == "Motor", 0.7, 0.5) * rank} %>% regularize() %>% {ifelse(is.na(.), 0, .)}
     ) %>%
     dplyr::ungroup() %>%
     dplyr::mutate( # Adjusting size after ungrouping
       "size" = regularize(n) + size
     )
 
+  theme <- list("mid" = mid, "tbl" = tbl)
+
+  return(theme)
+}
+
+vizTheme <- function(theme) {
+  #' Plot Thematic Map
+  #'
+  #' Plot the thematic map of modelled topics
+  #'
+  #' @param theme A theme data frame, usually obtained from `getTheme`
+  #' @return A GGPlot2 object
+  require("ggplot2")
+
+  mid <- theme$mid
+  tbl <- theme$tbl
+
+  emerging <- "The role of the environment and society starts to emerge in \nlinking childhood trauma to resilience."
+  basic <- "Suicidal ideation and cognitive function after traumatic events \nare the basic theme in resilience research."
+  niche <- "The basic of psychological resilience remains as a niche topic. \nVarious studies have been published, yet not highly cited."
+  motor <- "Research in resilience is mostly active in elucidating how traumatic \nevent in children affects mental health."
+
+  modx <- 0.2
+
   plt <- tbl %>%
     ggplot(aes(x = rank_central, y = rank_dense, color = year)) +
     geom_hline(yintercept = mid$y, linetype = 2, color = "grey70") +
     geom_vline(xintercept = mid$x, linetype = 2, color = "grey70") +
-    geom_jitter(aes(size = size), alpha = tbl$alpha, width = 0.1, height = 0.1) +
-    #geom_point(aes(size = size), alpha = tbl$alpha) +
-    ggrepel::geom_text_repel(aes(label = token, size = size), alpha = tbl$alpha) +
+    geom_jitter(aes(size = size), alpha = tbl$alpha * 0.8, width = 0.1, height = 0.1) +
+    ggrepel::geom_text_repel(aes(label = token, size = size), alpha = tbl$alpha, show.legend = FALSE) +
+    scale_color_manual(breaks = levels(tbl$year), values = c("#81a1c1", "#4c566a", "#bf616a"), name = "Publication Year") +
+    guides(size = "none") +
+    annotate(
+      geom  = "label",
+      label = c(emerging, basic, niche, motor),
+      x = modx  + rep(c(0, mid$x), 2),
+      y = c(mid$y - rep({modx * 1.5}, 2), rep(max(tbl$rank_dense), 2)),
+      hjust = "left"
+    ) +
+    labs(
+      title = "Thematic map of most occurring topics extracted from structural topic models",
+      x = "A proxy for the number of citations",
+      y = "A proxy for the number of publications"
+    ) +
+    theme_minimal() +
     theme(
       axis.ticks = element_blank(),
       axis.text  = element_blank(),
@@ -130,3 +192,4 @@ vizTheme <- function(map_bib, topic_label) {
 
   return(plt)
 }
+
