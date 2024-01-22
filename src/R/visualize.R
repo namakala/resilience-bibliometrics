@@ -76,10 +76,43 @@ vizNetwork <- function(...) {
   return(plt)
 }
 
-getTheme <- function(map_bib, topic_label) {
-  #' Plot Thematic Map
+addQuadrant <- function(map_bib, mid_only = FALSE) {
+  #' Add Quadrant Themes
   #'
-  #' Plot the thematic map of modelled topics
+  #' Add quadrant indicators to the thematic data frame
+  #'
+  #' @param map_bib A thematic map data frame, usually the output of `mapTheme`
+  #' @param mid_only Boolean to return only mid values of ranked centrality and
+  #' density
+  #' @return A thematic data frame, augmented with its quadrant indicators
+
+  mid <- with(
+    map_bib, list("x" = rank_central, "y" = rank_dense) %>% lapply(mean)
+  ) %>%
+    data.frame()
+
+  if (mid_only) {
+    return(mid)
+  }
+
+  theme <- map_bib %>%
+    dplyr::mutate(
+      "group" = as.numeric(group),
+      "theme" = dplyr::case_when(
+        rank_central <  mid$x & rank_dense <  mid$y ~ "Emerging",
+        rank_central >= mid$x & rank_dense <  mid$y ~ "Basic",
+        rank_central <  mid$x & rank_dense >= mid$y ~ "Niche",
+        rank_central >= mid$x & rank_dense >= mid$y ~ "Motor"
+      )
+    )
+
+  return(theme)
+}
+
+getTheme <- function(map_bib, topic_label) {
+  #' Get Thematic Data Frame
+  #'
+  #' Prepare a tidy data frame for plotting
   #'
   #' @param map_bib A thematic map data frame, usually the output of `mapTheme`
   #' @param topic_label A labelTopics object, usually the output of `getLabel`
@@ -111,27 +144,16 @@ getTheme <- function(map_bib, topic_label) {
     subset(.$weight == "prob", select = -weight) %>%
     dplyr::mutate("token" = gsub(x = token, ";.*", "") %>% stringr::str_to_upper())
   
-  mid <- with(
-    map_bib, list("x" = rank_central, "y" = rank_dense) %>% lapply(mean)
-  ) %>%
-    data.frame()
+  mid <- addQuadrant(map_bib, mid_only = TRUE)
 
   tbl <- map_bib %>%
     dplyr::inner_join(label, by = c("group" = "topic")) %>%
-    dplyr::mutate(
-      "group" = as.numeric(group),
-      "theme" = dplyr::case_when(
-        rank_central < mid$x & rank_dense < mid$y ~ "Emerging",
-        rank_central > mid$x & rank_dense < mid$y ~ "Basic",
-        rank_central < mid$x & rank_dense > mid$y ~ "Niche",
-        rank_central > mid$x & rank_dense > mid$y ~ "Motor"
-      )
-    ) %>%
+    addQuadrant() %>%
     dplyr::group_by(theme, year) %>%
     dplyr::mutate( # Create visual cues based on grouping
       "size"  = regularize(n) %>% {ifelse(is.na(.), 0, .)} %>% exp() %>% exp(),
       "rank"  = rank(size, ties.method = "first"),
-      "alpha" = {ifelse(theme == "Motor", 0.7, 0.5) * rank} %>% regularize() %>% {ifelse(is.na(.), 0, .)}
+      "alpha" = {ifelse(theme == "Motor", 0.7, 0.5) * rank} %>% regularize() %>% {ifelse(is.na(.), 0, .)} %>% add(0.1)
     ) %>%
     dplyr::ungroup() %>%
     dplyr::mutate( # Adjusting size after ungrouping
@@ -193,3 +215,74 @@ vizTheme <- function(theme) {
   return(plt)
 }
 
+vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
+  #' Visualize Historical Co-citation
+  #'
+  #' An adaptation of `bibliometrix::histPlot` to visualize the hitorical
+  #' co-ctation network.
+  #'
+  #' @param net_hist A historical citation network, usually obtained from
+  #' `bibliometrix::histNetwork`
+  #' @param rank_cite Obtain only the n-highest citation network
+  #' @param map_bib A thematic map data frame, usually the output of `mapTheme`
+  #' @param topic_var Variable name of the topic from the augmented data frame
+  #' used by `net_hist`
+  #' @return A GGPlot2 object
+  require("ggraph")
+
+  # Get theme
+  theme <- map_bib %>%
+    addQuadrant() %>%
+    subset(select = c(year, group, theme)) %>%
+    dplyr::mutate("group" = as.character(group))
+
+  # Extract data and generate the subset index
+  tbl   <- net_hist$histData
+  net   <- net_hist$NetMatrix
+  ncite <- colSums(net)
+  index <- sort(ncite, decreasing = TRUE) %>%
+    extract(min(rank_cite, length(.))) %>%
+    {which(ncite >= .)}
+
+  # Subset the matrix then extract the author year
+  net       %<>% {.[names(index), names(index)]}
+  ncite     %<>% {.[index]}
+  auth_year  <-  rownames(net) %>% {gsub(x = ., "(.*, \\d{4}).*", "\\1")}
+
+  # Get topic
+  bib <- net_hist$M %>%
+    subset(select = c("PY", "DI", topic_var)) %>%
+    set_names(c("year", "DOI", "topic")) %>%
+    dplyr::mutate("year" = groupYear(year)) %>%
+    dplyr::inner_join(theme, by = c("topic" = "group", "year" = "year")) %>%
+    subset(select = -year)
+
+  # Create a graph object
+  graph <- igraph::graph.adjacency(net, mode = "directed", weighted = NULL) %>%
+    igraph::simplify(remove.multiple = TRUE, remove.loops = TRUE) %>%
+    tidygraph::as_tbl_graph() %>%
+    dplyr::mutate(
+      "DOI"       = gsub(x = name, ".*DOI\\s", ""),
+      "auth_year" = gsub(x = name, "(.*, \\d{4}).*", "\\1"),
+      "year"      = gsub(x = auth_year, ".*,\\s", "") %>% as.numeric(),
+      "label"     = paste(auth_year, DOI, sep = "\n")
+    ) %>%
+    dplyr::inner_join(bib, by = "DOI")
+
+  # Plot the graph object
+  plt <- graph %>%
+    ggraph("hive", axis = theme, sort.by = year, normalize = FALSE, offset = pi, split.axes = "loops") +
+    theme_void() +
+    geom_edge_hive(color = "grey70", alpha = 0.4) +
+    geom_node_point(aes(color = theme), alpha = 0.8) +
+    geom_node_text(aes(label = label), alpha = 0.8, repel = TRUE, max.overlaps = Inf) +
+    theme(legend.position = "top")
+
+  plt2 <- graph %>%
+    ggraph("linear") +
+    geom_edge_arc(fold = TRUE, edge_colour = "grey70") +
+    geom_node_point(aes(color = theme)) +
+    geom_node_text(aes(label = label), repel = TRUE)
+
+  return(plt)
+}
