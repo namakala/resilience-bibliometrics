@@ -65,8 +65,9 @@ genCoupling <- function(bib_aug, ...) {
   require("bibliometrix")
 
   # Generate a bibliographic network matrix
-  net <- mkNetwork(bib_aug, ...)
-  mtx <- normalizeSimilarity(net, type = "association")
+  net   <- mkNetwork(bib_aug, network_field = "DI", ...)
+  index <- rownames(net) %in% bib_aug$DI
+  mtx   <- normalizeSimilarity(net, type = "association") %>% {.[index, index]}
 
   # Convert to data frame containing graph's nodes and edges
   coupling <- mtx %>%

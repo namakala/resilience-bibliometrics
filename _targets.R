@@ -92,7 +92,7 @@ list(
   tar_target(net_bib_plt, vizNetwork(net_bib_collaboration_authors, n = 100)),
 
   # Map the theme based on coupled DOI on modelled topics
-  tar_target(coupling, genCoupling(sub_bib, coupling = "CR", network_field = "DI")),
+  tar_target(coupling, genCoupling(sub_bib, coupling = "CR")),
   tar_map(
     unlist = FALSE,
     values = tibble::tibble("topic" = paste0("topic", c("1", "2", ""))),
@@ -101,7 +101,7 @@ list(
 
   # Generate historical direct citation network for papers cited at least 1000x
   tar_target(net_hist, histNetwork(sub_bib, min.citations = 1000, sep = ";")),
-  tar_target(net_hist_plt, histPlot(net_hist, n = 15, size = 10, labelsize = 3)),
+  tar_target(net_hist_plt, vizHistCite(net_hist, rank_cite = 50, map_bib = map_bib_topic2, topic_var = "topic2")),
 
   # Generate thematic map
   tar_target(

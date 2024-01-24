@@ -98,11 +98,14 @@ addQuadrant <- function(map_bib, mid_only = FALSE) {
   theme <- map_bib %>%
     dplyr::mutate(
       "group" = as.numeric(group),
-      "theme" = dplyr::case_when(
-        rank_central <  mid$x & rank_dense <  mid$y ~ "Emerging",
-        rank_central >= mid$x & rank_dense <  mid$y ~ "Basic",
-        rank_central <  mid$x & rank_dense >= mid$y ~ "Niche",
-        rank_central >= mid$x & rank_dense >= mid$y ~ "Motor"
+      "theme" = factor(
+        dplyr::case_when(
+          rank_central <  mid$x & rank_dense <  mid$y ~ "Emerging",
+          rank_central >= mid$x & rank_dense <  mid$y ~ "Basic",
+          rank_central <  mid$x & rank_dense >= mid$y ~ "Niche",
+          rank_central >= mid$x & rank_dense >= mid$y ~ "Motor"
+        ),
+        levels = c("Emerging", "Niche", "Basic", "Motor")
       )
     )
 
@@ -118,6 +121,7 @@ getTheme <- function(map_bib, topic_label) {
   #' @param topic_label A labelTopics object, usually the output of `getLabel`
   #' @return A tidy data frame
 
+  # Call the function recursively if the inputs are lists
   if (any(class(map_bib) == "list") & any(class(topic_label) == "list")) {
 
     theme <- mapply(
@@ -140,10 +144,12 @@ getTheme <- function(map_bib, topic_label) {
     return(theme)
   }
 
+  # Extract the most probable label from each topic
   label <- topic_label %>%
     subset(.$weight == "prob", select = -weight) %>%
     dplyr::mutate("token" = gsub(x = token, ";.*", "") %>% stringr::str_to_upper())
   
+  # Calculate the mid point of centrality and density
   mid <- addQuadrant(map_bib, mid_only = TRUE)
 
   tbl <- map_bib %>%
@@ -178,9 +184,9 @@ vizTheme <- function(theme) {
   tbl <- theme$tbl
 
   emerging <- "The role of the environment and society starts to emerge in \nlinking childhood trauma to resilience."
-  basic <- "Suicidal ideation and cognitive function after traumatic events \nare the basic theme in resilience research."
-  niche <- "The basic of psychological resilience remains as a niche topic. \nVarious studies have been published, yet not highly cited."
-  motor <- "Research in resilience is mostly active in elucidating how traumatic \nevent in children affects their mental health."
+  basic    <- "Suicidal ideation and cognitive function after traumatic events \nare the basic theme in resilience research."
+  niche    <- "The basic of psychological resilience remains as a niche topic. \nVarious studies have been published, yet not highly cited."
+  motor    <- "Research in resilience is mostly active in elucidating how traumatic \nevent in children affects their mental health."
 
   modx <- 0.2
 
@@ -241,7 +247,7 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
   net   <- net_hist$NetMatrix
   ncite <- colSums(net)
   index <- sort(ncite, decreasing = TRUE) %>%
-    extract(min(rank_cite, length(.))) %>%
+    extract(min(rank_cite, length(.))) %>% # Get only the top rank_cite
     {which(ncite >= .)}
 
   # Subset the matrix then extract the author year
@@ -265,24 +271,33 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
       "DOI"       = gsub(x = name, ".*DOI\\s", ""),
       "auth_year" = gsub(x = name, "(.*, \\d{4}).*", "\\1"),
       "year"      = gsub(x = auth_year, ".*,\\s", "") %>% as.numeric(),
-      "label"     = paste(auth_year, DOI, sep = "\n")
+      "label"     = paste(auth_year, DOI, sep = "\n"),
+      "authority" = tidygraph::centrality_authority(),
+      "between"   = tidygraph::centrality_betweenness(),
+      "power"     = tidygraph::centrality_power(),
+      "degree"    = tidygraph::centrality_degree(),
+      "eigen"     = tidygraph::centrality_eigen(),
+      "subgraph"  = tidygraph::centrality_subgraph(),
+      "hub"       = tidygraph::centrality_hub(),
+      "size"      = hub %>% regularize() %>% {(. + 0.2) / 1.2},
+      "alpha"     = size
     ) %>%
     dplyr::inner_join(bib, by = "DOI")
 
   # Plot the graph object
   plt <- graph %>%
-    ggraph("hive", axis = theme, sort.by = year, normalize = FALSE, offset = pi, split.axes = "loops") +
+    ggraph("igraph", algorithm = "kk") +
     theme_void() +
-    geom_edge_hive(color = "grey70", alpha = 0.4) +
-    geom_node_point(aes(color = theme), alpha = 0.8) +
-    geom_node_text(aes(label = label), alpha = 0.8, repel = TRUE, max.overlaps = Inf) +
-    theme(legend.position = "top")
-
-  plt2 <- graph %>%
-    ggraph("linear") +
-    geom_edge_arc(fold = TRUE, edge_colour = "grey70") +
-    geom_node_point(aes(color = theme)) +
-    geom_node_text(aes(label = label), repel = TRUE)
+    geom_edge_link(edge_colour = "grey60", alpha = 0.4) +
+    geom_node_point(aes(color = theme, size = size)) +
+    geom_node_text(aes(label = label, size = size, alpha = alpha, color = theme), repel = TRUE) +
+    scale_color_manual(values = c("#4c566a", "#8fbcbb", "#5e81ac", "#bf616a"), name = "Theme") +
+    guides(size = "none", alpha = "none") +
+    labs(
+      title = sprintf("Historical network of %s most cited articles on psychological resilience research, grouped by thematic clusters", rank_cite),
+      subtitle = "The node size is proportional to the coupling frequency in the bibliographic network"
+    ) +
+    theme(legend.position = "bottom")
 
   return(plt)
 }
