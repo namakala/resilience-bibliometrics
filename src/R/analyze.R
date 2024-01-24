@@ -49,7 +49,38 @@ mkNetwork <- function(bib, short = FALSE, ...) {
   return(net_bib)
 }
 
-mapTheme <- function(aug_bib, cluster) {
+genCoupling <- function(bib_aug, ...) {
+  #' Generate Coupling Matrix
+  #'
+  #' Generate a coupling matrix based on a bibliographic data frame
+  #'
+  #' @param bib_aug An augmented bibliometric data frame, usually the output of
+  #' `augmentBib`
+  #' @param coupling,network_field Optional parameters to pass on to
+  #' `bibliometrix::cocMatrix` as the `Field` parameter. Providing both
+  #' `coupling` and `network_field` is necessary to construct a custom adjacency
+  #' (square) matrix. See more in the *details* of `mkNetwork`.
+  #' @return A tidy data frame containing expanded rows and columns from a
+  #' coupling matrix
+  require("bibliometrix")
+
+  # Generate a bibliographic network matrix
+  net <- mkNetwork(bib_aug, ...)
+  mtx <- normalizeSimilarity(net, type = "association")
+
+  # Convert to data frame containing graph's nodes and edges
+  coupling <- mtx %>%
+    Matrix::triu() %>% # Convert the lower triangle to zeroes
+    as.matrix() %>%
+    data.frame(check.names = FALSE) %>%
+    dplyr::mutate("from" = colnames(mtx)) %>%
+    tidyr::pivot_longer(cols = !from, names_to = "to", values_to = "edge") %>%
+    dplyr::filter(edge > 0)
+
+  return(coupling)
+}
+
+mapTheme <- function(coupling, bib_aug, cluster) {
   #' Map Bibliographic Theme
   #'
   #' Map the bibliographic theme based on given bibliometric data frame. The
@@ -57,7 +88,9 @@ mapTheme <- function(aug_bib, cluster) {
   #' a complete explanation, see `bibliometrix::thematicMap`, this function is
   #' an adaptation of it.
   #'
-  #' @param bib An augmented bibliometric data frame, usually the output of
+  #' @param coupling A tidy data frame containing expanded rows and columns
+  #' from a coupling matrix
+  #' @param bib_aug An augmented bibliometric data frame, usually the output of
   #' `augmentBib`
   #' @param cluster Column name of topic groups in an augmented bibliometric data
   #' frame
@@ -65,41 +98,20 @@ mapTheme <- function(aug_bib, cluster) {
   require("bibliometrix")
 
   # Extract node names and grouping clusters
-  cluster <- aug_bib %>%
+  cluster <- bib_aug %>%
     subset(select = c("DI", cluster, "PY")) %>%
     set_names(c("node", "group", "year")) %>%
-    dplyr::mutate(
-      "year" = cut(
-         year,
-         right  = FALSE,
-         breaks = c(-Inf, 2000, 2011, Inf),
-         labels = c("< 2000", "2000-2010", "> 2010"),
-         ordered_result = TRUE
-      )
-    )
-
-  # Create bibliographic network matrix
-  net   <- mkNetwork(aug_bib, coupling = "ID", network_field = "DI")
-  index <- rownames(net) %in% cluster$node
-
-  # Normalize the association strength, subset based on indices
-  mtx <- normalizeSimilarity(net, type = "association") %>% {.[index, index]}
+    dplyr::mutate("year" = groupYear(year))
 
   # Convert to data frame containing graph's nodes and edges
-  tbl <- mtx %>%
-    Matrix::triu() %>% # Convert the lower triangle to zeroes
-    as.matrix() %>%
-    data.frame(check.names = FALSE) %>%
-    dplyr::mutate("from" = colnames(mtx)) %>%
-    tidyr::pivot_longer(cols = !from, names_to = "to", values_to = "edge") %>%
-    dplyr::filter(edge > 0) %>%
-    dplyr::left_join(cluster, by = c("from" = "node")) %>%
-    dplyr::left_join(cluster, by = c("to"   = "node")) %>%
+  tbl <- coupling %>%
+    dplyr::inner_join(cluster, by = c("from" = "node")) %>%
+    dplyr::inner_join(cluster, by = c("to"   = "node")) %>%
     dplyr::rename(
-      group = group.x,
-      group_to   = group.y,
-      year  = year.x,
-      year_to    = year.y
+      group    = group.x,
+      group_to = group.y,
+      year     = year.x,
+      year_to  = year.y
     )
 
   # Calculate centrality and density

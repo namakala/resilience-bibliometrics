@@ -1,6 +1,6 @@
 # Functions to perform text mining
 
-tokenize <- function(bib, wordlist = NULL, ...) {
+tokenize <- function(bib, wordlist = NULL, use_abstract = FALSE, ...) {
   #' Make Text Corpus
   #'
   #' Create a text corpus from the abstracts of extracted query results. The
@@ -8,12 +8,22 @@ tokenize <- function(bib, wordlist = NULL, ...) {
   #'
   #' @param bib A bibliography data frame from exported query results
   #' @param wordlist Additional list of stop word to exclude
+  #' @param use_abstract Tokenize abstract instead of keywords
   #' @param ... Parameters to pass on to `tokenizeNgrams`
   #' @return A data frame containing DOI and tokenized abstract
   require("tidytext")
 
-  abstract <- bib %>%
-    subset(select = c(DI, AB)) %>%
+  if (use_abstract) {
+    sub_bib <- bib %>% subset(select = c(DI, AB)) %>%
+      dplyr::mutate("AB" = gsub(x = AB, "\\s+copyright.*", "", ignore.case = TRUE))
+  } else {
+    sub_bib <- bib %>%
+      subset(!{is.na(.$ID) | is.na(.$DE)}) %>%
+      dplyr::mutate("keyword" = paste(na.omit(ID), na.omit(DE), sep = "; ")) %>%
+      subset(select = c(DI, keyword))
+  }
+
+  abstract <- sub_bib %>%
     set_names(c("doi", "abstract")) %>%
     tibble::tibble()
 

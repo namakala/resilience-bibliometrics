@@ -178,3 +178,22 @@ augmentBib <- function(bib, topic_doc = NULL, token = NULL) {
 
   return(bib_aug)
 }
+
+groupYear <- function(year) {
+  #' Group Year
+  #'
+  #' Group year into groups of years
+  #'
+  #' @param year A numeric vector containing year objects
+  #' @return An ordered vector of year groups
+
+  group <- cut(
+    year,
+    right  = FALSE,
+    breaks = c(-Inf, 2000, 2011, Inf),
+    labels = c("< 2000", "2000-2010", "> 2010"),
+    ordered_result = TRUE
+  )
+
+  return(group)
+}

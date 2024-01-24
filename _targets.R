@@ -42,7 +42,7 @@ list(
     values = tibble::tibble("n" = (1:3)),
 
     # Tokenize the abstracts
-    tar_target(token, tokenize(bib, wordlist = "data/ref/awl.txt", n = n)),
+    tar_target(token, tokenize(bib, wordlist = "data/ref/awl.txt", n = n, use_abstract = TRUE)),
     tar_target(token_count, countToken(token)),
     tar_target(token_stat,  getTokenStat(token)),
 
@@ -89,25 +89,26 @@ list(
     tar_target(net_bib, mkNetwork(sub_bib, analysis = analysis, network = network, short = TRUE))
   ),
 
-  tar_target(net_bib_plt, vizNetwork(net_bib_collaboration_authors, n = 200)),
+  tar_target(net_bib_plt, vizNetwork(net_bib_collaboration_authors, n = 100)),
 
   # Map the theme based on coupled DOI on modelled topics
+  tar_target(coupling, genCoupling(sub_bib, coupling = "CR", network_field = "DI")),
   tar_map(
     unlist = FALSE,
     values = tibble::tibble("topic" = paste0("topic", c("1", "2", ""))),
-    tar_target(map_bib, mapTheme(sub_bib, cluster = topic), deployment = "main")
+    tar_target(map_bib, mapTheme(coupling, sub_bib, cluster = topic))
   ),
 
   # Generate historical direct citation network for papers cited at least 1000x
   tar_target(net_hist, histNetwork(sub_bib, min.citations = 1000, sep = ";")),
-  tar_target(net_hist_plt, histPlot(net_hist, n = 15, size = 10, labelsize = 5)),
+  tar_target(net_hist_plt, histPlot(net_hist, n = 15, size = 10, labelsize = 3)),
 
   # Generate thematic map
   tar_target(
     theme,
     getTheme(
       list(map_bib_topic1, map_bib_topic2),
-      list(topic_label_1, topic_label_2)
+      list(topic_label_1,  topic_label_2)
     )
   ),
 
