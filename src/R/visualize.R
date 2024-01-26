@@ -76,7 +76,7 @@ vizNetwork <- function(...) {
   return(plt)
 }
 
-addQuadrant <- function(map_bib, mid_only = FALSE) {
+findQuadrant <- function(map_bib, mid_only = FALSE) {
   #' Add Quadrant Themes
   #'
   #' Add quadrant indicators to the thematic data frame
@@ -150,11 +150,11 @@ getTheme <- function(map_bib, topic_label) {
     dplyr::mutate("token" = gsub(x = token, ";.*", "") %>% stringr::str_to_upper())
   
   # Calculate the mid point of centrality and density
-  mid <- addQuadrant(map_bib, mid_only = TRUE)
+  mid <- findQuadrant(map_bib, mid_only = TRUE)
 
   tbl <- map_bib %>%
     dplyr::inner_join(label, by = c("group" = "topic")) %>%
-    addQuadrant() %>%
+    findQuadrant() %>%
     dplyr::group_by(theme, year) %>%
     dplyr::mutate( # Create visual cues based on grouping
       "size"  = regularize(n) %>% {ifelse(is.na(.), 0, .)} %>% exp() %>% exp(),
@@ -238,7 +238,7 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
 
   # Get theme
   theme <- map_bib %>%
-    addQuadrant() %>%
+    findQuadrant() %>%
     subset(select = c(year, group, theme)) %>%
     dplyr::mutate("group" = as.character(group))
 
@@ -289,9 +289,9 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
     ggraph("igraph", algorithm = "kk") +
     theme_void() +
     geom_edge_link(edge_colour = "grey60", alpha = 0.4) +
-    geom_node_point(aes(color = theme, size = size)) +
+    geom_node_point(aes(color = theme, size = size), alpha = 0.8) +
     geom_node_text(aes(label = label, size = size, alpha = alpha, color = theme), repel = TRUE) +
-    scale_color_manual(values = c("#4c566a", "#8fbcbb", "#5e81ac", "#bf616a"), name = "Theme") +
+    scale_color_manual(values = c("#4c566a", "#8fbcbb", "#5e81ac", "#bf616a"), name = "Theme:") +
     guides(size = "none", alpha = "none") +
     labs(
       title = sprintf("Historical network of %s most cited articles on psychological resilience research, grouped by thematic clusters", rank_cite),
@@ -301,3 +301,4 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
 
   return(plt)
 }
+
