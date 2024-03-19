@@ -616,25 +616,29 @@
     },
     "crew": {
       "Package": "crew",
-      "Version": "0.6.0",
+      "Version": "0.9.0",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
         "R",
         "R6",
+        "cli",
         "data.table",
         "getip",
+        "later",
         "mirai",
         "nanonext",
         "processx",
+        "promises",
         "ps",
         "rlang",
         "stats",
         "tibble",
         "tidyselect",
+        "tools",
         "utils"
       ],
-      "Hash": "a7dfba95c3019cfecc6c10bdebbe024a"
+      "Hash": "771993945c468c1eb98693c71640b268"
     },
     "crosstalk": {
       "Package": "crosstalk",
@@ -1555,14 +1559,14 @@
     },
     "mirai": {
       "Package": "mirai",
-      "Version": "0.11.1",
+      "Version": "0.12.1",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
         "R",
         "nanonext"
       ],
-      "Hash": "4f1caf9f5805425d9f6a62dcd6e26a66"
+      "Hash": "bd1a289ee0b2a824e6715b996bf949eb"
     },
     "multcompView": {
       "Package": "multcompView",
@@ -1598,13 +1602,13 @@
     },
     "nanonext": {
       "Package": "nanonext",
-      "Version": "0.10.4",
+      "Version": "0.13.2",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
         "R"
       ],
-      "Hash": "27657c7f163a8527858a94850e3e2c94"
+      "Hash": "32530fd4384ec2f63587c43e66d21883"
     },
     "netrankr": {
       "Package": "netrankr",
