@@ -13,9 +13,19 @@ tokenize <- function(bib, wordlist = NULL, use_abstract = FALSE, ...) {
   #' @return A data frame containing DOI and tokenized abstract
   require("tidytext")
 
+  regex <- paste(
+    list(
+      "copyright" = ";?\\s+(copyright|license).*",
+      "xsection"  = "cross.section\\w*",
+      "heading"   = "\\w+:",
+      "CI"        = "conf\\w+\\s+int\\w+al"
+    ),
+    collapse = "|"
+  )
+
   if (use_abstract) {
     sub_bib <- bib %>% subset(select = c(DI, AB)) %>%
-      dplyr::mutate("AB" = gsub(x = AB, "\\s+copyright.*", "", ignore.case = TRUE))
+      dplyr::mutate("AB" = gsub(x = AB, regex, "", ignore.case = TRUE))
   } else {
     sub_bib <- bib %>%
       subset(!{is.na(.$ID) | is.na(.$DE)}) %>%
