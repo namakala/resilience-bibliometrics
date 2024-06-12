@@ -83,8 +83,8 @@ list(
   tar_map(
     unlist = FALSE,
     values = tibble::tibble(
-      "analysis" = c("collaboration", "co-occurrences", "co-citation"),
-      "network"  = c("authors", "keywords", "references")
+      "analysis" = c("collaboration", "co-occurrences"),
+      "network"  = c("authors", "keywords")
     ),
     tar_target(net_bib, mkNetwork(sub_bib, analysis = analysis, network = network, short = TRUE))
   ),

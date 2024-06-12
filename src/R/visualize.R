@@ -7,7 +7,9 @@ regularize <- function(x) {
   #'
   #' @param x A numeric vector to regularize
   #' @return A regularized numeric vector
-  reg <- {x - min(x)} / {max(x) - min(x)}
+
+  x   %<>% {ifelse(is.na(.), 0, .)}
+  reg  <-  {x - min(x)} / {max(x) - min(x)}
 
   return(reg)
 }
@@ -144,10 +146,13 @@ getTheme <- function(map_bib, topic_label) {
     return(theme)
   }
 
-  # Extract the most probable label from each topic
+  # Extract three most probable labels from each topic
   label <- topic_label %>%
     subset(.$weight == "prob", select = -weight) %>%
-    dplyr::mutate("token" = gsub(x = token, ";.*", "") %>% stringr::str_to_upper())
+    dplyr::mutate(
+      "token" = strsplit(token, ";") %>%
+        sapply(\(lab) lab[1:3] %>% stringr::str_to_upper() %>% paste(collapse = "\n"))
+    )
   
   # Calculate the mid point of centrality and density
   mid <- findQuadrant(map_bib, mid_only = TRUE)
@@ -157,13 +162,13 @@ getTheme <- function(map_bib, topic_label) {
     findQuadrant() %>%
     dplyr::group_by(theme, year) %>%
     dplyr::mutate( # Create visual cues based on grouping
-      "size"  = regularize(n) %>% {ifelse(is.na(.), 0, .)} %>% exp() %>% exp(),
+      "size"  = regularize(n),
       "rank"  = rank(size, ties.method = "first"),
       "alpha" = {ifelse(theme == "Motor", 0.7, 0.5) * rank} %>% regularize() %>% {ifelse(is.na(.), 0, .)} %>% add(0.1)
     ) %>%
     dplyr::ungroup() %>%
     dplyr::mutate( # Adjusting size after ungrouping
-      "size" = regularize(n) + size
+      "size" = size + {regularize(n) %>% exp() %>% exp()}
     )
 
   theme <- list("mid" = mid, "tbl" = tbl)
