@@ -13,16 +13,25 @@ tokenize <- function(bib, wordlist = NULL, use_abstract = FALSE, ...) {
   #' @return A data frame containing DOI and tokenized abstract
   require("tidytext")
 
+  # Set patterns to remove from the abstract
   regex <- paste(
     list(
-      "copyright" = ";?\\s+(copyright|license).*",
+      "copyright" = ";?\\s+(copyright|license|©).*",
       "xsection"  = "cross.section\\w*",
       "heading"   = "\\w+:",
-      "CI"        = "conf\\w+\\s+int\\w+al"
+      "CI"        = "conf\\w+\\s+int\\w+al",
+      "interview" = "semi|struc\\w+|interview\\w*",
+      "reserved"  = "right.?\\s+reserv\\w+",
+      "press1"    = "taylor francis",
+      "press2"    = "oxford uni\\w+ press",
+      "press3"    = "wolt\\w+ klu\\w+ health",
+      "press4"    = "americ\\w+ psych\\w+al assoc\\w+",
+      "psychinfo" = "(psyc.*reserved.*)."
     ),
     collapse = "|"
   )
 
+  # Subset the data frame to contain text body
   if (use_abstract) {
     sub_bib <- bib %>% subset(select = c(DI, AB)) %>%
       dplyr::mutate("AB" = gsub(x = AB, regex, "", ignore.case = TRUE))
@@ -37,6 +46,7 @@ tokenize <- function(bib, wordlist = NULL, use_abstract = FALSE, ...) {
     set_names(c("doi", "abstract")) %>%
     tibble::tibble()
 
+  # Set stop words
   if (!is.null(wordlist)) {
     wordlist %<>% readLines()
     stopword  <-  c(wordlist, stop_words$word)
@@ -44,6 +54,7 @@ tokenize <- function(bib, wordlist = NULL, use_abstract = FALSE, ...) {
     stopword  <-  stop_words$word
   }
 
+  # Tokenize the text
   token <- tokenizeNgrams(abstract, stopword = stopword, ...)
 
   return(token)
@@ -148,7 +159,7 @@ getTokenStat <- function(token, summarize = TRUE) {
   return(token_stat)
 }
 
-mkDocMatrix <- function(token, bib = NULL) {
+mkDocMatrix <- function(token, bib = NULL, shorten = FALSE) {
   #' Make Document Matrix
   #'
   #' Create a document feature matrix (DFM) natively supported by the
@@ -157,8 +168,18 @@ mkDocMatrix <- function(token, bib = NULL) {
   #'
   #' @param token A data frame containing DOI and tokenized abstract
   #' @param bib A bibliography data frame from exported query results
+  #' @param shorten A boolean option to shorten the set of token by slicing
+  #' only the most relevant ones
   #' @return A document feature matrix object for topic modelling
-  tbl <- countToken(token, summarize = FALSE)
+
+  tbl <- getTokenStat(token, summarize = FALSE)
+
+  if (shorten) {
+    tbl %<>%
+      dplyr::group_by(doi) %>%
+      dplyr::slice_max(tf_idf, n = 5)
+  }
+
   doi <- unique(tbl$doi)
   dfm <- tidytext::cast_dfm(tbl, document = "doi", term = "word", value = "n")
 
@@ -236,10 +257,10 @@ getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
       set_names(c("topic", "term", "prob"))
 
     sub_res <- res %>%
-      group_by(topic) %>%
-      slice_max(prob, n = n) %>%
-      ungroup() %>%
-      arrange(topic, -prob)
+      dplyr::group_by(topic) %>%
+      dplyr::slice_max(prob, n = n) %>%
+      dplyr::ungroup() %>%
+      dplyr::arrange(topic, -prob)
 
   } else if (type == "gamma") {
 
@@ -252,10 +273,10 @@ getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
       set_names(c("doi", "topic", "prob"))
 
     sub_res <- res %>%
-      group_by(doi) %>%
-      slice_max(prob, n = n) %>%
-      ungroup() %>%
-      arrange(doi, -prob)
+      dplyr::group_by(doi) %>%
+      dplyr::slice_max(prob, n = n) %>%
+      dplyr::ungroup() %>%
+      dplyr::arrange(doi, -prob)
 
   } else {
 
@@ -267,7 +288,7 @@ getTopic <- function(mod, type = "beta", truncate = TRUE, n = 1e2) {
     lapply(as.character) %>%
     data.frame() %>%
     tibble::tibble() %>%
-    inset("ntopic", value = max(as.numeric(.$topic)))
+    dplyr::mutate("ntopic" = max(as.numeric(topic)), "prob" = as.numeric(prob))
 
   if (truncate) {
     return(sub_res)
