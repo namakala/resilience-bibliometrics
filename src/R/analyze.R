@@ -98,9 +98,20 @@ mapTheme <- function(coupling, bib_aug, cluster) {
   #' @return A thematic map data frame
   require("bibliometrix")
 
+  # Locate entries which prob is greater than its mean
+  loc <- with(
+    bib_aug,
+    switch(
+      cluster,
+      "topic1" = as.numeric(prob1) %>% {. > mean(., na.rm = TRUE)},
+      "topic2" = as.numeric(prob2) %>% {. > mean(., na.rm = TRUE)},
+      "topic"  = as.numeric(prob)  %>% {. > mean(., na.rm = TRUE)}
+    )
+  )
+
   # Extract node names and grouping clusters
   cluster <- bib_aug %>%
-    subset(select = c("DI", cluster, "PY")) %>%
+    subset(loc, select = c("DI", cluster, "PY")) %>%
     set_names(c("node", "group", "year")) %>%
     dplyr::mutate("year" = groupYear(year))
 
