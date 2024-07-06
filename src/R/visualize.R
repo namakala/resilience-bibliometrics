@@ -97,6 +97,8 @@ findQuadrant <- function(map_bib, mid_only = FALSE) {
     return(mid)
   }
 
+  notes <- annotateTheme()
+
   theme <- map_bib %>%
     dplyr::mutate(
       "group" = as.numeric(group),
@@ -107,8 +109,9 @@ findQuadrant <- function(map_bib, mid_only = FALSE) {
           rank_central <  mid$x & rank_dense >= mid$y ~ "Niche",
           rank_central >= mid$x & rank_dense >= mid$y ~ "Motor"
         ),
-        levels = c("Emerging", "Niche", "Basic", "Motor")
-      )
+        levels = c("Niche", "Motor", "Emerging", "Basic")
+      ),
+      "theme_note" = unlist(notes[theme])
     )
 
   return(theme)
@@ -176,6 +179,23 @@ getTheme <- function(map_bib, topic_label) {
   return(theme)
 }
 
+annotateTheme <- function() {
+  #' Annotate Theme
+  #'
+  #' Function to annotate the explanation associated with the given theme.
+  #'
+  #' @return A vector of annotated themes
+
+  theme_note <- list(
+    basic    = "Basic: Psychological resilience and coping strategies \nacross different life stages, emphasizing social and familial support.",
+    niche    = "Niche: PTSD and trauma, particularly in children \nand adolescents, with a focus on supportive family environments.",
+    emerging = "Emerging: Investigates mental health resilience, amid \nsocial support dynamics and emerging research on psychological well-being.",
+    motor    = "Motor: Explores the intersection of mental health and \nsocial support to alleviate depressive symptoms and PTSD."
+  )
+
+  return(theme_note)
+}
+
 vizTheme <- function(theme) {
   #' Plot Thematic Map
   #'
@@ -185,15 +205,15 @@ vizTheme <- function(theme) {
   #' @return A GGPlot2 object
   require("ggplot2")
 
-  mid <- theme$mid
-  tbl <- theme$tbl
-
-  emerging <- "The role of the environment and society starts to emerge in \nlinking childhood trauma to resilience."
-  basic    <- "Suicidal ideation and cognitive function after traumatic events \nare the basic theme in resilience research."
-  niche    <- "The basic of psychological resilience remains as a niche topic. \nVarious studies have been published, yet not highly cited."
-  motor    <- "Research in resilience is mostly active in elucidating how traumatic \nevent in children affects their mental health."
-
+  mid  <- theme$mid
+  tbl  <- theme$tbl
   modx <- 0.2
+
+  theme_note <- annotateTheme()
+  basic      <- theme_note$basic
+  niche      <- theme_note$niche
+  emerging   <- theme_note$emerging
+  motor      <- theme_note$motor
 
   plt <- tbl %>%
     ggplot(aes(x = rank_central, y = rank_dense, color = year)) +
@@ -244,7 +264,7 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
   # Get theme
   theme <- map_bib %>%
     findQuadrant() %>%
-    subset(select = c(year, group, theme)) %>%
+    subset(select = c(year, group, theme, theme_note)) %>%
     dplyr::mutate("group" = as.character(group))
 
   # Extract data and generate the subset index
@@ -265,8 +285,7 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
     subset(select = c("PY", "DI", topic_var)) %>%
     set_names(c("year", "DOI", "topic")) %>%
     dplyr::mutate("year" = groupYear(year)) %>%
-    dplyr::inner_join(theme, by = c("topic" = "group", "year" = "year")) %>%
-    subset(select = -year)
+    dplyr::inner_join(theme, by = c("topic" = "group", "year" = "year"))
 
   # Create a graph object
   graph <- igraph::graph.adjacency(net, mode = "directed", weighted = NULL) %>%
@@ -275,7 +294,6 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
     dplyr::mutate(
       "DOI"       = gsub(x = name, ".*DOI\\s", ""),
       "auth_year" = gsub(x = name, "(.*, \\d{4}).*", "\\1"),
-      "year"      = gsub(x = auth_year, ".*,\\s", "") %>% as.numeric(),
       "label"     = paste(auth_year, DOI, sep = "\n"),
       "authority" = tidygraph::centrality_authority(),
       "between"   = tidygraph::centrality_betweenness(),
@@ -292,17 +310,27 @@ vizHistCite <- function(net_hist, rank_cite, map_bib, topic_var) {
   # Plot the graph object
   plt <- graph %>%
     ggraph("igraph", algorithm = "kk") +
-    theme_void() +
+    ggpubr::theme_pubclean() +
     geom_edge_link(edge_colour = "grey60", alpha = 0.4) +
-    geom_node_point(aes(color = theme, size = size), alpha = 0.8) +
-    geom_node_text(aes(label = label, size = size, alpha = alpha, color = theme), repel = TRUE) +
-    scale_color_manual(values = c("#4c566a", "#8fbcbb", "#5e81ac", "#bf616a"), name = "Theme:") +
+    geom_node_point(aes(color = year, size = size), alpha = 0.8) +
+    geom_node_text(aes(label = label, size = size, alpha = alpha, color = year), repel = TRUE, show.legend = FALSE) +
+    ggraph::facet_nodes(~theme, ncol = 2, scales = "free") +
+    scale_color_manual(values = c("#81a1c1", "#4c566a", "#bf616a"), name = "Publication Year") +
     guides(size = "none", alpha = "none") +
     labs(
-      title = sprintf("Historical network of %s most cited articles on psychological resilience research, grouped by thematic clusters", rank_cite),
-      subtitle = "The node size is proportional to the coupling frequency in the bibliographic network"
+      title = sprintf("Top %s articles on psychological resilience research with the highest co-citation, grouped by thematic clusters", rank_cite),
+      x = "",
+      y = ""
     ) +
-    theme(legend.position = "bottom")
+    theme(
+      legend.position = "bottom",
+      axis.ticks = element_blank(),
+      axis.text  = element_blank(),
+      axis.line  = element_blank(),
+      panel.grid = element_blank(),
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor.y = element_blank()
+    )
 
   return(plt)
 }
